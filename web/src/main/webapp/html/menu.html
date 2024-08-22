@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>SyncLite Sample App</title>
+</head>
+<body>
+	<div class="sidemenu">
+		<a href="selectDBDirectory.jsp">Create/Initialize Databases</a>
+		<a href="runDMLs.jsp">Run workload</a>
+		<a href="queryDevice.jsp">Query Database</a>
+		<a href="stopDevices.jsp">Stop Databases</a>
+		<a class="bottomlink" href="https://www.synclite.io">
+			<br><br>2023 &copy; SyncLite.<br>All Rights Reserved.
+		</a>
+	</div>
+
+	<script type="text/javascript">
+		var expand = document.getElementsByClassName("expand-btn");
+		var cnt;
+		for (cnt = 0; cnt < expand.length; cnt++) {
+		  expand[cnt].addEventListener("click", function() {
+		    this.classList.toggle("expander-active");
+		    var expandList= this.nextElementSibling;
+		    if (expandList.style.display === "block") {
+		    	expandList.style.display = "none";
+		    } else {
+		    	expandList.style.display = "block";
+		    }
+		  });
+		}
+	</script>
+
+</body>
+</html>
