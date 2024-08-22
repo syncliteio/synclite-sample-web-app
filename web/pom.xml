@@ -90,7 +90,7 @@
 
 		<dependency>
 			<groupId>io.synclite</groupId>
-			<artifactId>synclite-logger-extended</artifactId>
+			<artifactId>synclite-logger</artifactId>
 			<version>${synclite-logger.version}</version>
 			<!-- <systemPath>E:\SyncLiteWorkspaces\SyncLiteSampleApp\web\src\main\resources\logger-03.08.2022-jar-with-dependencies.jar</systemPath> -->			
 			<!-- <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/logger-27.09.2022-jar-with-dependencies.jar</systemPath> -->
