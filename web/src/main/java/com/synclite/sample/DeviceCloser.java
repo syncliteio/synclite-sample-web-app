@@ -69,8 +69,6 @@ public class DeviceCloser extends HttpServlet {
 			HyperSQL.closeAllDevices();
 			HyperSQLAppender.closeAllDevices();
 			
-			DBLogger.closeAllDevices();
-			
 			Streaming.closeAllDevices();
 			request.getRequestDispatcher("stopDevices.jsp?closeStatus=SUCCESS&closeStatusDetails=;").forward(request, response);
 		} catch (Exception e) {
