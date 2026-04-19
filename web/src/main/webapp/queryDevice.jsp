@@ -25,6 +25,7 @@
 <%@page import="org.sqlite.*"%>
 <%@page import="java.util.ArrayList"%>
 <%@page import="java.util.List"%>
+<%@page import="org.owasp.encoder.Encode"%>
 
 
 
@@ -43,11 +44,31 @@
 </script>
 <title>Run Queries on SyncLite Device</title>
 </head>
+<%!
+private String escHtml(String value) {
+	return value == null ? "" : Encode.forHtml(value);
+}
+
+private boolean isReadOnlyQuery(String query) {
+	if (query == null) {
+		return false;
+	}
+	String q = query.trim().toLowerCase();
+	if (q.isEmpty()) {
+		return false;
+	}
+	if (q.contains(";")) {
+		return false;
+	}
+	return q.startsWith("select") || q.startsWith("with") || q.startsWith("pragma") || q.startsWith("explain");
+}
+%>
 <%
 String basePath = "";
 if (session.getAttribute("basePath") != null) {
 	basePath = session.getAttribute("basePath").toString();
 }
+String csrfToken = (String) session.getAttribute("csrfToken");
 
 String deviceType = "SQLITE"; 
 if (session.getAttribute("deviceType") != null) {
@@ -86,19 +107,20 @@ String sampleSQL = "SELECT * FROM t1";
 				out.println("<h4 style=\"color: blue;\"> Successfully executed query on specified database </h4>");
 			} else if (runStatus.equals("FAILED")) {
 				out.println("<h4 style=\"color: red;\"> Query execution failed with error : "
-				+ runStatusDetails.replace("<", "&lt;").replace(">", "&gt;") + "</h4>");
+				+ escHtml(runStatusDetails) + "</h4>");
 			}
 		}
 		%>
 
 		<form method="post">
+			<input type="hidden" name="csrfToken" value="<%=escHtml(csrfToken)%>"/>
 			<table>
 				<tbody>
 					<tr></tr>
 					<tr>
 						<td>Database Path</td>
 						<td><input type="text" id="basePath" name="basePath"
-							value="<%=basePath%>" disabled/></td>
+							value="<%=escHtml(basePath)%>" disabled/></td>
 					</tr>
 
 					<tr>
@@ -110,50 +132,50 @@ String sampleSQL = "SELECT * FROM t1";
 								} else {
 									out.println("<option value=\"SQLITE\">SQLite</option>");
 								}
-								if (deviceType.equals("SQLITE_APPENDER")) {
-									out.println("<option value=\"SQLITE_APPENDER\" selected>SQLite Appender</option>");
+								if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
+									out.println("<option value=\"SQLITE_STORE\" selected>SQLite Store</option>");
 								} else {
-									out.println("<option value=\"SQLITE_APPENDER\">SQLite Appender</option>");
+									out.println("<option value=\"SQLITE_STORE\">SQLite Store</option>");
 								}
 								if (deviceType.equals("DUCKDB")) {
 									out.println("<option value=\"DUCKDB\" selected>DuckDB</option>");
 								} else {
 									out.println("<option value=\"DUCKDB\">DuckDB</option>");
 								}
-								if (deviceType.equals("DUCKDB_APPENDER")) {
-									out.println("<option value=\"DUCKDB_APPENDER\" selected>DuckDB Appender</option>");
+								if (deviceType.equals("DUCKDB_STORE")) {
+									out.println("<option value=\"DUCKDB_STORE\" selected>DuckDB Store</option>");
 								} else {
-									out.println("<option value=\"DUCKDB_APPENDER\">DuckDB Appender</option>");
+									out.println("<option value=\"DUCKDB_STORE\">DuckDB Store</option>");
 								}
 								if (deviceType.equals("DERBY")) {
 									out.println("<option value=\"DERBY\" selected>Apache Derby</option>");
 								} else {
 									out.println("<option value=\"DERBY\">Apache Derby</option>");
 								}
-								if (deviceType.equals("DERBY_APPENDER")) {
-									out.println("<option value=\"DERBY_APPENDER\" selected>Apache Derby Appender</option>");
+								if (deviceType.equals("DERBY_STORE")) {
+									out.println("<option value=\"DERBY_STORE\" selected>Apache Derby Store</option>");
 								} else {
-									out.println("<option value=\"DERBY_APPENDER\">Apache Derby Appender</option>");
+									out.println("<option value=\"DERBY_STORE\">Apache Derby Store</option>");
 								}
 								if (deviceType.equals("H2")) {
 									out.println("<option value=\"H2\" selected>H2</option>");
 								} else {
 									out.println("<option value=\"H2\">H2</option>");
 								}
-								if (deviceType.equals("H2_APPENDER")) {
-									out.println("<option value=\"H2_APPENDER\" selected>H2 Appender</option>");
+								if (deviceType.equals("H2_STORE")) {
+									out.println("<option value=\"H2_STORE\" selected>H2 Store</option>");
 								} else {
-									out.println("<option value=\"H2_APPENDER\">H2 Appender</option>");
+									out.println("<option value=\"H2_STORE\">H2 Store</option>");
 								}
-								if (deviceType.equals("HYPERSQL_APPENDER")) {
-									out.println("<option value=\"HYPERSQL_APPENDER\" selected>HyperSQL Appender</option>");
+								if (deviceType.equals("HYPERSQL")) {
+									out.println("<option value=\"HYPERSQL\" selected>HyperSQL</option>");
 								} else {
-									out.println("<option value=\"HYPERSQL_APPENDER\">HyperSQL Appender</option>");
+									out.println("<option value=\"HYPERSQL\">HyperSQL</option>");
 								}
-								if (deviceType.equals("TELEMETRY")) {
-									out.println("<option value=\"TELEMETRY\" selected>SyncLite Telemetry</option>");
+								if (deviceType.equals("HYPERSQL_STORE")) {
+									out.println("<option value=\"HYPERSQL_STORE\" selected>HyperSQL Store</option>");
 								} else {
-									out.println("<option value=\"TELEMETRY\">SyncLite Telemetry</option>");
+									out.println("<option value=\"HYPERSQL_STORE\">HyperSQL Store</option>");
 								}
 								if (deviceType.equals("STREAMING")) {
 									out.println("<option value=\"STREAMING\" selected>SyncLite Streaming</option>");
@@ -167,13 +189,13 @@ String sampleSQL = "SELECT * FROM t1";
 					<tr>
 						<td>Database Index</td>
 						<td><input type="text" id="deviceIdx"
-							name="deviceIdx" value="<%=deviceIdx%>"
+							name="deviceIdx" value="<%=escHtml(String.valueOf(deviceIdx))%>"
 							title="Specify the index of the database/device to execute a query."/></td>
 					</tr>
 
 					<tr>
 						<td>Query</td>
-						<td><textarea name="workload" id="workload" rows="10" cols="100" placeholder="<%=sampleSQL%>" style="color:blue"  title="Specify SQL query to execute on the specified database/device."><%=workload%></textarea>
+						<td><textarea name="workload" id="workload" rows="10" cols="100" placeholder="<%=escHtml(sampleSQL)%>" style="color:blue"  title="Specify one read-only SQL query (SELECT, WITH, PRAGMA, or EXPLAIN). Multiple statements and semicolon-separated SQL are blocked."><%=escHtml(workload)%></textarea>
 						</td>
 					</tr>
 
@@ -183,20 +205,25 @@ String sampleSQL = "SELECT * FROM t1";
 							<%
 							long rowCnt = 0;
 							if (!workload.trim().isEmpty()) {
+								if (!isReadOnlyQuery(workload)) {
+									runStatus = "FAILED";
+									runStatusDetails = "Only single read-only SQL query is allowed";
+									throw new ServletException(runStatusDetails);
+								}
 								Path dbPath = Path.of(basePath, String.valueOf(deviceIdx));
 								String url = "jdbc:sqlite:" + dbPath;
 								Properties props = new Properties();
-								if (deviceType.equals("DUCKDB") || deviceType.equals("DUCKDB_APPENDER")) {
+								if (deviceType.equals("DUCKDB") || deviceType.equals("DUCKDB_STORE")) {
 									url = "jdbc:duckdb:" + dbPath;
 									Class.forName("org.duckdb.DuckDBDriver");
 									props.setProperty("duckdb.read_only", "true");
-								} else if (deviceType.equals("DERBY") || deviceType.equals("DERBY_APPENDER")){
+								} else if (deviceType.equals("DERBY") || deviceType.equals("DERBY_STORE")){
 									url = "jdbc:derby:" + dbPath;
 									Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-								} else if (deviceType.equals("H2") || deviceType.equals("H2_APPENDER")){
+								} else if (deviceType.equals("H2") || deviceType.equals("H2_STORE")){
 									url = "jdbc:h2:" + dbPath;
 									Class.forName("org.h2.Driver");
-								} else if (deviceType.equals("HYPERSQL") || deviceType.equals("HYPERSQL_APPENDER")){
+								} else if (deviceType.equals("HYPERSQL") || deviceType.equals("HYPERSQL_STORE")){
 									url = "jdbc:hsqldb:" + dbPath;
 							        Class.forName("org.hsqldb.jdbc.JDBCDriver");
 								} else {
@@ -228,7 +255,7 @@ String sampleSQL = "SELECT * FROM t1";
 													out.println("<tr>");
 													for (int k = 1; k <= colCount; ++k) {
 														out.println("<td>");
-														out.println(rs.getString(k));
+														out.println(escHtml(rs.getString(k)));
 														out.println("</td>");
 													}
 													out.println("</tr>");
@@ -242,7 +269,7 @@ String sampleSQL = "SELECT * FROM t1";
 									} 
 								} catch (Exception e) {
 									runStatus = "FAILED";
-									runStatusDetails = "Query execution failed with exception : " + e.getMessage();
+									runStatusDetails = "Query execution failed with exception : " + escHtml(e.getMessage());
 								}							
 							}
 							%>
@@ -261,7 +288,7 @@ String sampleSQL = "SELECT * FROM t1";
 							out.println("<tr>");
 							out.println("<td></td>");							
 							out.println("<td>");
-							out.println(runStatusDetails);
+							out.println(escHtml(runStatusDetails));
 							out.println("</td>");
 							out.println("</tr>");
 							

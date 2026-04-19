@@ -24,6 +24,7 @@
 <%@page import="java.io.FileWriter"%>
 <%@page import="javax.websocket.Session"%>
 <%@page import="io.synclite.logger.*" %>
+<%@page import="org.owasp.encoder.Encode"%>
 
 
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
@@ -39,19 +40,28 @@
 </script>
 <title>SyncLite App - Create Databases</title>
 </head>
+<%!
+private String escHtml(String value) {
+	return value == null ? "" : Encode.forHtml(value);
+}
+%>
 <%
 
-String jobName = session.getAttribute("jobName").toString(); 
+String jobName = session.getAttribute("jobName") == null ? null : session.getAttribute("jobName").toString(); 
 //Check if base path is set in session
 if (jobName == null) {
 	response.sendRedirect("selectDBDirectory.jsp");
+	return;
 }
 
-String basePath = session.getAttribute("basePath").toString(); 
+String basePath = session.getAttribute("basePath") == null ? null : session.getAttribute("basePath").toString(); 
 //Check if base path is set in session
 if (basePath == null) {
 	response.sendRedirect("selectDBDirectory.jsp");
+	return;
 }
+
+String csrfToken = (String) session.getAttribute("csrfToken");
 
 
 Integer numDevices = 1;
@@ -246,25 +256,26 @@ if (request.getParameter("emulateStatusDetails") != null) {
 				out.println("<h4 style=\"color: blue;\"> Successfully created  SyncLite devices </h4>");
 			} else if (emulateStatus.equals("FAIL")) {
 				out.println("<h4 style=\"color: red;\"> Device creation failed with error : "
-				+ emulateStatusDetails.replace("<", "&lt;").replace(">", "&gt;") + "</h4>");
+				+ escHtml(emulateStatusDetails) + "</h4>");
 			}
 		}
 		%>
 
 		<form action="${pageContext.request.contextPath}/deviceCreator"
 			method="post">
+			<input type="hidden" name="csrfToken" value="<%=escHtml(csrfToken)%>"/>
 			<table>
 				<tbody>
 					<tr>
 						<td>Job Name</td>
-						<td><input type="text" size = 30 id="job-name" name="job-name" value="<%=jobName%>" onchange="this.form.action='createDevices.jsp'; this.form.submit();" title="Specify a job name for sample application. Make sure that the job name specified here is same as the one specified in SyncLite Consolidator"/></td>
+						<td><input type="text" size = 30 id="job-name" name="job-name" value="<%=escHtml(jobName)%>" onchange="this.form.action='createDevices.jsp'; this.form.submit();" title="Specify a job name for sample application. Make sure that the job name specified here is same as the one specified in SyncLite Consolidator"/></td>
 					</tr>
 			
 					<tr>
 						<td>DB Base Path</td>
 						<td><input type="text" size=30 id="basePath"
 							name="basePath"
-							value="<%=basePath%>"
+							value="<%=escHtml(basePath)%>"
 							title="Specify a path to a directory which will hold all the created device/database files."/></td>
 					</tr>
 					
@@ -272,63 +283,63 @@ if (request.getParameter("emulateStatusDetails") != null) {
 						<td>Number of Databases</td>
 						<td><input type="text" id="numDevices"
 							name="numDevices"
-							value="<%=numDevices%>"
+							value="<%=escHtml(String.valueOf(numDevices))%>"
 							title="Specify number of devices to be created/initialized. Please note that a numeric index ( starting from 1 to numDevices) will be designated as a device name to each device. In your own real applications, you can specify your own device names through properties file or SyncLite API."/></td>
 					</tr>
 					
 					<tr>
 						<td>Database Type</td>
-						<td><select id="deviceType" name="deviceType" title="Select database/device type. A TELEMETRY device allows SQL operations CREATE/DROP/ALTER/RENAME/SELECT/INSERT and maintains only schema in the underlying database file, with all the inserts logged in eventlog files in the device stage directory. An APPENDER device is similar to a TELEMETRY device but in addition, it keeps a full copy of all the ingested data in the local database file. A SQLite/DuckDB device allows all SQL operations CREATE/DROP/ALTER/RENAME/SELECT/INSERT/UPDATE/DELETE under transactions, with all transactions captured in commandlog files in the device stage directory.">
+						<td><select id="deviceType" name="deviceType" title="Select database/device type. BASE types capture transactional DDL and DML. STORE types keep a local data copy in addition to staged logs.">
 								<%
 								if (deviceType.equals("SQLITE")) {
 									out.println("<option value=\"SQLITE\" selected>SQLite</option>");
 								} else {
 									out.println("<option value=\"SQLITE\">SQLite</option>");
 								}
-								if (deviceType.equals("SQLITE_APPENDER")) {
-									out.println("<option value=\"SQLITE_APPENDER\" selected>SQLite Appender</option>");
+								if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
+									out.println("<option value=\"SQLITE_STORE\" selected>SQLite Store</option>");
 								} else {
-									out.println("<option value=\"SQLITE_APPENDER\">SQLite Appender</option>");
+									out.println("<option value=\"SQLITE_STORE\">SQLite Store</option>");
 								}
 								if (deviceType.equals("DUCKDB")) {
 									out.println("<option value=\"DUCKDB\" selected>DuckDB</option>");
 								} else {
 									out.println("<option value=\"DUCKDB\">DuckDB</option>");
 								}
-								if (deviceType.equals("DUCKDB_APPENDER")) {
-									out.println("<option value=\"DUCKDB_APPENDER\" selected>DuckDB Appender</option>");
+								if (deviceType.equals("DUCKDB_STORE")) {
+									out.println("<option value=\"DUCKDB_STORE\" selected>DuckDB Store</option>");
 								} else {
-									out.println("<option value=\"DUCKDB_APPENDER\">DuckDB Appender</option>");
+									out.println("<option value=\"DUCKDB_STORE\">DuckDB Store</option>");
 								}
 								if (deviceType.equals("DERBY")) {
 									out.println("<option value=\"DERBY\" selected>Apache Derby</option>");
 								} else {
 									out.println("<option value=\"DERBY\">Apache Derby</option>");
 								}
-								if (deviceType.equals("DERBY_APPENDER")) {
-									out.println("<option value=\"DERBY_APPENDER\" selected>Apache Derby Appender</option>");
+								if (deviceType.equals("DERBY_STORE")) {
+									out.println("<option value=\"DERBY_STORE\" selected>Apache Derby Store</option>");
 								} else {
-									out.println("<option value=\"DERBY_APPENDER\">Apache Derby Appender</option>");
+									out.println("<option value=\"DERBY_STORE\">Apache Derby Store</option>");
 								}
 								if (deviceType.equals("H2")) {
 									out.println("<option value=\"H2\" selected>H2</option>");
 								} else {
 									out.println("<option value=\"H2\">H2</option>");
 								}
-								if (deviceType.equals("H2_APPENDER")) {
-									out.println("<option value=\"H2_APPENDER\" selected>H2 Appender</option>");
+								if (deviceType.equals("H2_STORE")) {
+									out.println("<option value=\"H2_STORE\" selected>H2 Store</option>");
 								} else {
-									out.println("<option value=\"H2_APPENDER\">H2 Appender</option>");
+									out.println("<option value=\"H2_STORE\">H2 Store</option>");
 								}
-								if (deviceType.equals("HYPERSQL_APPENDER")) {
-									out.println("<option value=\"HYPERSQL_APPENDER\" selected>HyperSQL Appender</option>");
+								if (deviceType.equals("HYPERSQL")) {
+									out.println("<option value=\"HYPERSQL\" selected>HyperSQL</option>");
 								} else {
-									out.println("<option value=\"HYPERSQL_APPENDER\">HyperSQL Appender</option>");
+									out.println("<option value=\"HYPERSQL\">HyperSQL</option>");
 								}
-								if (deviceType.equals("TELEMETRY")) {
-									out.println("<option value=\"TELEMETRY\" selected>SyncLite Telemetry</option>");
+								if (deviceType.equals("HYPERSQL_STORE")) {
+									out.println("<option value=\"HYPERSQL_STORE\" selected>HyperSQL Store</option>");
 								} else {
-									out.println("<option value=\"TELEMETRY\">SyncLite Telemetry</option>");
+									out.println("<option value=\"HYPERSQL_STORE\">HyperSQL Store</option>");
 								}
 								if (deviceType.equals("STREAMING")) {
 									out.println("<option value=\"STREAMING\" selected>SyncLite Streaming</option>");
@@ -339,8 +350,8 @@ if (request.getParameter("emulateStatusDetails") != null) {
 						</select></td>
 					</tr>
 					<tr>
-						<td>Database Configurations</td>
-						<td><textarea name="props" id="props" rows="25" cols="100" title="Specify database/device configuration. Specified device configurations are written into a .conf file and supplied to initialization of each database/device. Please note the defaults specified for local-stage-directory and destination-type."><%=props%></textarea>
+						<td>Device Configuration Manager</td>
+						<td><textarea name="props" id="props" rows="25" cols="100" title="Edit SyncLite device configuration. The content is saved as synclite_logger.conf in the selected base path and used to initialize all created devices. Defaults include local stage and destination settings."><%=escHtml(props)%></textarea>
 						</td>
 					</tr>
 					

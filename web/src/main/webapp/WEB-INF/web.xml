@@ -4,7 +4,20 @@
   <welcome-file-list>
     <welcome-file>selectDBDirectory.jsp</welcome-file>
   </welcome-file-list>
-    <session-config>
-    <session-timeout>-1</session-timeout>
-  </session-config>  
+  <filter>
+    <filter-name>SecurityHeadersAndCSRFFilter</filter-name>
+    <filter-class>com.synclite.sample.SecurityHeadersAndCSRFFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>SecurityHeadersAndCSRFFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <session-config>
+    <session-timeout>30</session-timeout>
+    <tracking-mode>COOKIE</tracking-mode>
+    <cookie-config>
+      <http-only>true</http-only>
+      <secure>true</secure>
+    </cookie-config>
+  </session-config>
 </web-app>

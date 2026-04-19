@@ -13,6 +13,7 @@
 --%>
 
 <%@page import="io.synclite.logger.*"%>
+<%@page import="org.owasp.encoder.Encode"%>
 
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
 	pageEncoding="ISO-8859-1"%>
@@ -28,10 +29,16 @@
 </script>
 <title>Stop SyncLite Devices</title>
 </head>
+<%!
+private String escHtml(String value) {
+	return value == null ? "" : Encode.forHtml(value);
+}
+%>
 <body>
 	<%@include file="html/menu.html"%>	
 	<div class="main">
 		<%
+		String csrfToken = (String) session.getAttribute("csrfToken");
 		String basePath = "";
 		if (session.getAttribute("basePath") != null) {
 			basePath = session.getAttribute("basePath").toString();
@@ -50,15 +57,16 @@
 		if (closeStatus != null) {
 			if (closeStatus.equals("SUCCESS")) {
 				out.println("<h4 style=\"color: blue;\"> Successfully closed all SyncLite devices </h4>");
-			} else if (closeStatus.equals("FAILED")) {
+			} else if (closeStatus.equals("FAIL")) {
 				out.println("<h4 style=\"color: red;\"> Device close failed with error : "
-				+ closeStatusDetails.replace("<", "&lt;").replace(">", "&gt;") + "</h4>");
+				+ escHtml(closeStatusDetails) + "</h4>");
 			}
 		}		
 
 		%>		
 		<form action="${pageContext.request.contextPath}/deviceCloser"
 				method="post">
+				<input type="hidden" name="csrfToken" value="<%=escHtml(csrfToken)%>"/>
 				<%
 				if (basePath.equals("")) {		
 					out.println("<h4 style=\"color: red;\"> Devices not initialized yet</h4>");		

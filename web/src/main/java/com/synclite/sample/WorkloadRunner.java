@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -42,6 +45,9 @@ import io.synclite.logger.*;
 @WebServlet("/workloadRunner")
 public class WorkloadRunner extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private static final Logger LOGGER = Logger.getLogger(WorkloadRunner.class.getName());
+	private static final int MAX_DEVICES = 200;
+	private static final int MAX_WORKLOAD_LENGTH = 200_000;
        
     /**
      * @see HttpServlet#HttpServlet()
@@ -54,18 +60,16 @@ public class WorkloadRunner extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		response.getWriter().append("Served at: ").append(request.getContextPath());
+		doPost(request, response);
 	}
 
 	/**
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
+		ExecutorService fixedPoolExecutor = null;
 		String workload = "";
 		try {
-			doGet(request, response);
 			String basePath = "";
 			if (request.getSession().getAttribute("basePath") != null) {
 				basePath = request.getSession().getAttribute("basePath").toString().trim();
@@ -75,48 +79,51 @@ public class WorkloadRunner extends HttpServlet {
 				throw new ServletException("Devices not Created/Initialized yet");
 			}
 
-			Integer numDevices = 1;
+			int numDevices = 1;
 			if (request.getSession().getAttribute("numDevices") != null) {
 				numDevices = (Integer) request.getSession().getAttribute("numDevices");
+			}
+			if (numDevices <= 0 || numDevices > MAX_DEVICES) {
+				throw new ServletException("Invalid number of initialized devices in session");
 			}
 
 			String deviceType = "SQLITE";
 			if (request.getSession().getAttribute("deviceType") != null) {
 				deviceType = request.getSession().getAttribute("deviceType").toString();
 			}
+			if (deviceType == null || deviceType.trim().isEmpty()) {
+				throw new ServletException("Device type not found in session");
+			}
 
 			if (request.getParameter("workload") != null) {
 				workload =  request.getParameter("workload").trim();
 			} 
+			if (workload.length() > MAX_WORKLOAD_LENGTH) {
+				throw new ServletException("Workload is too large");
+			}
 
-			Integer startDeviceIdx = 1;
+			int startDeviceIdx = 1;
 			if (request.getParameter("startDeviceIdx") != null) {
-				startDeviceIdx =  Integer.valueOf(request.getParameter("startDeviceIdx"));
+				startDeviceIdx = SecurityUtil.getRequiredPositiveInt(request, "startDeviceIdx", numDevices);
 			} 
 
-			Integer endDeviceIdx = 1;
+			int endDeviceIdx = 1;
 			if (request.getParameter("endDeviceIdx") != null) {
-				endDeviceIdx =  Integer.valueOf(request.getParameter("endDeviceIdx"));
+				endDeviceIdx = SecurityUtil.getRequiredPositiveInt(request, "endDeviceIdx", numDevices);
 			} 
+			if (startDeviceIdx > endDeviceIdx) {
+				throw new ServletException("Start Database Index must be <= End Database Index");
+			}
 
 			if (workload.equals("")) {
 				throw new ServletException("Please specify workload for execution");
 			}
 
-	        ExecutorService fixedPoolExecutor = Executors.newFixedThreadPool(numDevices);
+	        fixedPoolExecutor = Executors.newFixedThreadPool(numDevices);
 			List<Future<Void>> futureList = new ArrayList<>();
 
 			long startTime = System.currentTimeMillis();
-			if (deviceType.equals("TELEMETRY")) {
-				Class.forName("io.synclite.logger.Telemetry");
-				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
-					final Integer deviceIdx = i;
-					final String finalBasePath = basePath;
-					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsTelemetry(deviceIdx, finalBasePath, finalWorkload));
-					futureList.add(future);
-				}
-			} else if (deviceType.equals("STREAMING")) {
+			if (deviceType.equals("STREAMING")) {
 				Class.forName("io.synclite.logger.Streaming");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -170,7 +177,7 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsHyperSQL(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("SQLITE_APPENDER")) {
+			} else if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
 				Class.forName("io.synclite.logger.SQLiteAppender");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -179,7 +186,7 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsSQLiteAppender(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("DUCKDB_APPENDER")) {
+			} else if (deviceType.equals("DUCKDB_STORE")) {
 				Class.forName("io.synclite.logger.DuckDBAppender");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -188,7 +195,7 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDuckDBAppender(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("DERBY_APPENDER")) {
+			} else if (deviceType.equals("DERBY_STORE")) {
 				Class.forName("io.synclite.logger.DerbyAppender");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -197,7 +204,7 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDerbyAppender(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("H2_APPENDER")) {
+			} else if (deviceType.equals("H2_STORE")) {
 				Class.forName("io.synclite.logger.H2Appender");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -206,7 +213,7 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsH2Appender(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("HYPERSQL_APPENDER")) {
+			} else if (deviceType.equals("HYPERSQL_STORE")) {
 				Class.forName("io.synclite.logger.HyperSQLAppender");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
@@ -226,9 +233,30 @@ public class WorkloadRunner extends HttpServlet {
 			long elapsedTime = finishTime - startTime;
 			request.getRequestDispatcher("runDMLs.jsp?runStatus=SUCCESS&runStatusDetails=;&elapsedTime=" + elapsedTime).forward(request, response);
 
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			LOGGER.log(Level.WARNING, "Workload execution interrupted", e);
+			request.getRequestDispatcher("runDMLs.jsp?runStatus=FAIL&runStatusDetails="
+					+ SecurityUtil.encodeUrlParam("Workload execution interrupted")
+					+ ";&workload=" + SecurityUtil.encodeUrlParam(workload)).forward(request, response);
 		} catch (Exception e) {
-			String errorMsg = e.getMessage();
-			request.getRequestDispatcher("runDMLs.jsp?runStatus=FAIL&runStatusDetails=" + errorMsg + ";" + "&workload=" + workload).forward(request, response);
+			LOGGER.log(Level.WARNING, "Workload execution failed", e);
+			String errorMsg = SecurityUtil.sanitizeErrorMessage(e);
+			request.getRequestDispatcher("runDMLs.jsp?runStatus=FAIL&runStatusDetails="
+					+ SecurityUtil.encodeUrlParam(errorMsg)
+					+ ";&workload=" + SecurityUtil.encodeUrlParam(workload)).forward(request, response);
+		} finally {
+			if (fixedPoolExecutor != null) {
+				fixedPoolExecutor.shutdown();
+				try {
+					if (!fixedPoolExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+						fixedPoolExecutor.shutdownNow();
+					}
+				} catch (InterruptedException e) {
+					fixedPoolExecutor.shutdownNow();
+					Thread.currentThread().interrupt();
+				}
+			}
 		}
 	}
 	
@@ -338,17 +366,6 @@ public class WorkloadRunner extends HttpServlet {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
-		} 
-		return null;
-	}
-
-	private Void runDMLsTelemetry(int deviceIndex, String basePath, String workload) throws SQLException {
-		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
-		String url = "jdbc:synclite_telemetry:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
-			try (Statement stmt = conn.createStatement()) {
-				stmt.execute(workload);
-			}
 		} 
 		return null;
 	}
