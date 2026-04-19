@@ -17,6 +17,8 @@
 package com.synclite.sample;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -30,6 +32,7 @@ import io.synclite.logger.*;
 @WebServlet("/deviceCloser")
 public class DeviceCloser extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private static final Logger LOGGER = Logger.getLogger(DeviceCloser.class.getName());
        
     /**
      * @see HttpServlet#HttpServlet()
@@ -43,8 +46,7 @@ public class DeviceCloser extends HttpServlet {
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		response.getWriter().append("Served at: ").append(request.getContextPath());
+		doPost(request, response);
 	}
 
 	/**
@@ -52,7 +54,6 @@ public class DeviceCloser extends HttpServlet {
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
-			doGet(request, response);
 			SQLite.closeAllDevices();
 			SQLiteAppender.closeAllDevices();
 
@@ -68,15 +69,13 @@ public class DeviceCloser extends HttpServlet {
 			HyperSQL.closeAllDevices();
 			HyperSQLAppender.closeAllDevices();
 			
-			Telemetry.closeAllDevices();
-			
 			Streaming.closeAllDevices();
 			request.getRequestDispatcher("stopDevices.jsp?closeStatus=SUCCESS&closeStatusDetails=;").forward(request, response);
 		} catch (Exception e) {
-			//		request.setAttribute("saveStatus", "FAIL");
-			System.out.println("exception : " + e);
-			String errorMsg = e.getMessage() + e.getStackTrace();
-			request.getRequestDispatcher("closeDevices.jsp?closeStatus=FAIL&closeStatusDetails=" + errorMsg + ";").forward(request, response);
+			LOGGER.log(Level.WARNING, "Failed to close devices", e);
+			String errorMsg = SecurityUtil.sanitizeErrorMessage(e);
+			request.getRequestDispatcher("stopDevices.jsp?closeStatus=FAIL&closeStatusDetails="
+					+ SecurityUtil.encodeUrlParam(errorMsg) + ";").forward(request, response);
 		}
 	}
 

@@ -16,16 +16,19 @@
 
 package com.synclite.sample;
 
-import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.SQLException;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -41,6 +44,8 @@ import io.synclite.logger.*;
 @WebServlet("/deviceCreator")
 public class DeviceCreator extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private static final Logger LOGGER = Logger.getLogger(DeviceCreator.class.getName());
+	private static final int MAX_DEVICES = 200;
        
     /**
      * @see HttpServlet#HttpServlet()
@@ -61,128 +66,98 @@ public class DeviceCreator extends HttpServlet {
 	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		ExecutorService fixedPoolExecutor = null;
 		try {
-			String basePathVal = request.getSession().getAttribute("basePath").toString();
-			Path basePath;
-			if ((basePathVal== null) || basePathVal.trim().isEmpty()) {
+			Object basePathAttr = request.getSession().getAttribute("basePath");
+			if (basePathAttr == null) {
 				throw new ServletException("\"DB Base Path\" must be specified");
-			} else {
-				basePath = Path.of(basePathVal);				
-				if (! Files.exists(basePath)) {
-					Files.createDirectories(basePath);
-				}
-
-				if (! Files.exists(basePath)) {
-					throw new ServletException("Specified \"DB Base Path\" : " + basePath + " does not exist, please specify a valid \"BasePath\"");
-				}
+			}
+			Path basePath = SecurityUtil.normalizePath(basePathAttr.toString());
+			if (!Files.exists(basePath)) {
+				Files.createDirectories(basePath);
+			}
+			if (!Files.isDirectory(basePath)) {
+				throw new ServletException("Specified \"DB Base Path\" is invalid");
 			}
 
-			String props = request.getParameter("props");
-			if ((props == null) || props.trim().isEmpty()) {
-				throw new ServletException("\"Device Configurations\" must be specified");
-			}
-
-			String deviceType = request.getParameter("deviceType");
-			if ((deviceType == null)) {
-				throw new ServletException("\"Device Type\" must be specified");
-			}
-
-			Integer numDevices = Integer.valueOf(request.getParameter("numDevices"));
-			if ((numDevices == null)) {
-				throw new ServletException("\"Num Devices\" must be specified");
-			}
+			String props = SecurityUtil.getRequiredText(request, "props", 250_000);
+			String deviceType = SecurityUtil.getValidatedDeviceType(request, "deviceType");
+			int numDevices = SecurityUtil.getRequiredPositiveInt(request, "numDevices", MAX_DEVICES);
 
 			//Save the contents of props into base_path/synclite.props file
-			
-			String propsPath = Path.of(basePath.toString(), "synclite_logger.conf").toString();
-
-			FileWriter propsWriter = null;
-			try {
-				propsWriter = new FileWriter(propsPath);
-				propsWriter.write(props);
-				propsWriter.close();
-			} catch (Exception e) {
-				if (propsWriter != null) {
-					propsWriter.close();
-				}
-				throw e;
-			}
+			Path propsPath = basePath.resolve("synclite_logger.conf");
+			Files.writeString(propsPath, props, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 
 			//Class.forName("org.sqlite.JDBC");
 				
-	        ExecutorService fixedPoolExecutor = Executors.newFixedThreadPool(numDevices);
+	        fixedPoolExecutor = Executors.newFixedThreadPool(numDevices);
 			List<Future<Void>> futureList = new ArrayList<>();
 
-			if (deviceType.equals("TELEMETRY")) {
+			if (deviceType.equals("STREAMING")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initTelemetryDevice(deviceIdx, basePath, propsPath));
-					futureList.add(future);
-				}
-			} if (deviceType.equals("STREAMING")) {
-				for (int i = 1; i <= numDevices; ++i) {
-					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initStreamingDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initStreamingDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("SQLITE")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}				
 			} else if (deviceType.equals("DUCKDB")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DERBY")){
 					for (int i = 1; i <= numDevices; ++i) {
 						final int deviceIdx = i;
-						Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyDevice(deviceIdx, basePath, propsPath));
+						Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyDevice(deviceIdx, basePath, propsPath.toString()));
 						futureList.add(future);
 					}	
 			} else if (deviceType.equals("H2")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initH2Device(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initH2Device(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}	
 			} else if (deviceType.equals("HYPERSQL")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}	
-			} else if (deviceType.equals("SQLITE_APPENDER")) {
+			} else if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteAppenderDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteAppenderDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("DUCKDB_APPENDER")) {
+			} else if (deviceType.equals("DUCKDB_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBAppenderDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBAppenderDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 			 	}
-			} else if (deviceType.equals("DERBY_APPENDER")) {
+			} else if (deviceType.equals("DERBY_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyAppenderDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyAppenderDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("H2_APPENDER")) {
+			} else if (deviceType.equals("H2_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initH2AppenderDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initH2AppenderDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("HYPERSQL_APPENDER")) {
+			} else if (deviceType.equals("HYPERSQL_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLAppenderDevice(deviceIdx, basePath, propsPath));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLAppenderDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			}
@@ -195,25 +170,31 @@ public class DeviceCreator extends HttpServlet {
 			request.getSession().setAttribute("numDevices", numDevices);
 			
 			request.getRequestDispatcher("createDevices.jsp?emulateStatus=SUCCESS&emulateStatusDetails=;").forward(request, response);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			LOGGER.log(Level.WARNING, "Device creation interrupted", e);
+			request.getRequestDispatcher("createDevices.jsp?emulateStatus=FAIL&emulateStatusDetails="
+					+ SecurityUtil.encodeUrlParam("Device creation interrupted") + ";").forward(request, response);
 		} catch (Exception e) {
-		//		request.setAttribute("saveStatus", "FAIL");
-			System.out.println("exception : " + e);
-			String errorMsg = e.getMessage();
-			request.getRequestDispatcher("createDevices.jsp?emulateStatus=FAIL&emulateStatusDetails=" + errorMsg + ";").forward(request, response);
-	}
-
-	}
-
-	private Void initTelemetryDevice(int i, Path basePath, String propsPath) throws Exception {
-		try {
-			Class.forName("io.synclite.logger.Telemetry");
-			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			Telemetry.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
-			return null;
-		} catch (Exception e) {
-			throw e;
+			LOGGER.log(Level.WARNING, "Failed to create devices", e);
+			String errorMsg = SecurityUtil.sanitizeErrorMessage(e);
+			request.getRequestDispatcher("createDevices.jsp?emulateStatus=FAIL&emulateStatusDetails="
+					+ SecurityUtil.encodeUrlParam(errorMsg) + ";").forward(request, response);
+		} finally {
+			if (fixedPoolExecutor != null) {
+				fixedPoolExecutor.shutdown();
+				try {
+					if (!fixedPoolExecutor.awaitTermination(30, TimeUnit.SECONDS)) {
+						fixedPoolExecutor.shutdownNow();
+					}
+				} catch (InterruptedException e) {
+					fixedPoolExecutor.shutdownNow();
+					Thread.currentThread().interrupt();
+				}
+			}
 		}
-	} 
+
+	}
 
 	private Void initStreamingDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {

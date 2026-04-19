@@ -24,6 +24,7 @@
 <%@page import="io.synclite.logger.*" %>
 <%@page import="java.util.ArrayList"%>
 <%@page import="java.util.List"%>
+<%@page import="org.owasp.encoder.Encode"%>
 
 
 
@@ -40,11 +41,17 @@
 </script>
 <title>Run Workload on SyncLite Devices</title>
 </head>
+<%!
+private String escHtml(String value) {
+	return value == null ? "" : Encode.forHtml(value);
+}
+%>
 <%
 String basePath = "";
 if (session.getAttribute("basePath") != null) {
 	basePath = request.getSession().getAttribute("basePath").toString().trim();
 }
+String csrfToken = (String) session.getAttribute("csrfToken");
 
 Integer numDevices = 1;
 if (session.getAttribute("numDevices") != null) {
@@ -105,20 +112,21 @@ String sampleSQL = "--SQL DML/DDL Statements--\n\nCREATE TABLE t1(a INT);\nINSER
 				out.println("<h4 style=\"color: blue;\"> Status : SUCCESS. Elapsed Time : " + elapsedTime + " ms </h4>");
 			} else if (runStatus.equals("FAIL")) {
 				out.println("<h4 style=\"color: red;\"> Workload execution failed with error : "
-				+ runStatusDetails.replace("<", "&lt;").replace(">", "&gt;") + "</h4>");
+				+ escHtml(runStatusDetails) + "</h4>");
 			}
 		}
 		%>
 		
 		<form action="${pageContext.request.contextPath}/workloadRunner"
-			method="post">		
+			method="post">
+			<input type="hidden" name="csrfToken" value="<%=escHtml(csrfToken)%>"/>		
 			<table>
 				<tbody>
 					<tr>
 						<td>Database Path</td>
 						<td><input type="text" id="basePath"
 							name="basePath"
-							value="<%=basePath%>" disabled/></td>
+							value="<%=escHtml(basePath)%>" disabled/></td>
 					</tr>
 
 					<tr>
@@ -130,50 +138,50 @@ String sampleSQL = "--SQL DML/DDL Statements--\n\nCREATE TABLE t1(a INT);\nINSER
 								} else {
 									out.println("<option value=\"SQLITE\">SQLite</option>");
 								}
-								if (deviceType.equals("SQLITE_APPENDER")) {
-									out.println("<option value=\"SQLITE_APPENDER\" selected>SQLite Appender</option>");
+								if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
+									out.println("<option value=\"SQLITE_STORE\" selected>SQLite Store</option>");
 								} else {
-									out.println("<option value=\"SQLITE_APPENDER\">SQLite Appender</option>");
+									out.println("<option value=\"SQLITE_STORE\">SQLite Store</option>");
 								}
 								if (deviceType.equals("DUCKDB")) {
 									out.println("<option value=\"DUCKDB\" selected>DuckDB</option>");
 								} else {
 									out.println("<option value=\"DUCKDB\">DuckDB</option>");
 								}
-								if (deviceType.equals("DUCKDB_APPENDER")) {
-									out.println("<option value=\"DUCKDB_APPENDER\" selected>DuckDB Appender</option>");
+								if (deviceType.equals("DUCKDB_STORE")) {
+									out.println("<option value=\"DUCKDB_STORE\" selected>DuckDB Store</option>");
 								} else {
-									out.println("<option value=\"DUCKDB_APPENDER\">DuckDB Appender</option>");
+									out.println("<option value=\"DUCKDB_STORE\">DuckDB Store</option>");
 								}
 								if (deviceType.equals("DERBY")) {
 									out.println("<option value=\"DERBY\" selected>Apache Derby</option>");
 								} else {
 									out.println("<option value=\"DERBY\">Apache Derby</option>");
 								}
-								if (deviceType.equals("DERBY_APPENDER")) {
-									out.println("<option value=\"DERBY_APPENDER\" selected>Apache Derby Appender</option>");
+								if (deviceType.equals("DERBY_STORE")) {
+									out.println("<option value=\"DERBY_STORE\" selected>Apache Derby Store</option>");
 								} else {
-									out.println("<option value=\"DERBY_APPENDER\">Apache Derby Appender</option>");
+									out.println("<option value=\"DERBY_STORE\">Apache Derby Store</option>");
 								}
 								if (deviceType.equals("H2")) {
 									out.println("<option value=\"H2\" selected>H2</option>");
 								} else {
 									out.println("<option value=\"H2\">H2</option>");
 								}
-								if (deviceType.equals("H2_APPENDER")) {
-									out.println("<option value=\"H2_APPENDER\" selected>H2 Appender</option>");
+								if (deviceType.equals("H2_STORE")) {
+									out.println("<option value=\"H2_STORE\" selected>H2 Store</option>");
 								} else {
-									out.println("<option value=\"H2_APPENDER\">H2 Appender</option>");
+									out.println("<option value=\"H2_STORE\">H2 Store</option>");
 								}
-								if (deviceType.equals("HYPERSQL_APPENDER")) {
-									out.println("<option value=\"HYPERSQL_APPENDER\" selected>HyperSQL Appender</option>");
+								if (deviceType.equals("HYPERSQL")) {
+									out.println("<option value=\"HYPERSQL\" selected>HyperSQL</option>");
 								} else {
-									out.println("<option value=\"HYPERSQL_APPENDER\">HyperSQL Appender</option>");
+									out.println("<option value=\"HYPERSQL\">HyperSQL</option>");
 								}
-								if (deviceType.equals("TELEMETRY")) {
-									out.println("<option value=\"TELEMETRY\" selected>SyncLite Telemetry</option>");
+								if (deviceType.equals("HYPERSQL_STORE")) {
+									out.println("<option value=\"HYPERSQL_STORE\" selected>HyperSQL Store</option>");
 								} else {
-									out.println("<option value=\"TELEMETRY\">SyncLite Telemetry</option>");
+									out.println("<option value=\"HYPERSQL_STORE\">HyperSQL Store</option>");
 								}
 								if (deviceType.equals("STREAMING")) {
 									out.println("<option value=\"STREAMING\" selected>SyncLite Streaming</option>");
@@ -188,7 +196,7 @@ String sampleSQL = "--SQL DML/DDL Statements--\n\nCREATE TABLE t1(a INT);\nINSER
 						<td>Start Database Index</td>
 						<td><input type="Integer" id="startDeviceIdx"
 							name="startDeviceIdx"
-							value="<%=startDeviceIdx%>"
+							value="<%=escHtml(String.valueOf(startDeviceIdx))%>"
 							title="Specify the starting index of the database/device to execute SQL workload."/></td>
 					</tr>
 
@@ -196,13 +204,13 @@ String sampleSQL = "--SQL DML/DDL Statements--\n\nCREATE TABLE t1(a INT);\nINSER
 						<td>End Database Index</td>
 						<td><input type="Integer" id="endDeviceIdx"
 							name="endDeviceIdx"
-							value="<%=endDeviceIdx%>"
+							value="<%=escHtml(String.valueOf(endDeviceIdx))%>"
 							title="Specify the ending index of the database/device to execute SQL workload."/></td>
 					</tr>
 
 					<tr>
 						<td>SQL Workload (DDL/DML)</td>
-						<td><textarea name="workload" id="workload" rows="25" cols="100" placeholder="<%=sampleSQL%>" style="color:blue" title="Specify SQL workload to execute on the selected set of database/devices"><%=workload%></textarea>
+						<td><textarea name="workload" id="workload" rows="25" cols="100" placeholder="<%=escHtml(sampleSQL)%>" style="color:blue" title="Specify SQL workload to execute on the selected set of database/devices"><%=escHtml(workload)%></textarea>
 						</td>
 					</tr>
 				</tbody>				

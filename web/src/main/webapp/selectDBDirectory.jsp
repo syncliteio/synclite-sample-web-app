@@ -14,6 +14,7 @@
 
 <%@page import="java.nio.file.Files"%>
 <%@page import="java.nio.file.Path"%>
+<%@page import="org.owasp.encoder.Encode"%>
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
 	pageEncoding="ISO-8859-1"%>
 <!DOCTYPE html>
@@ -24,11 +25,18 @@
 <title>Configure SyncLite Sample Application</title>
 </head>
 
+<%!
+private String escHtml(String value) {
+	return value == null ? "" : Encode.forHtml(value);
+}
+%>
+
 <% 
 	String jobName = request.getParameter("jobName");
 	String errorMsg = request.getParameter("errorMsg");
 	
 	String basePath = request.getParameter("basePath");
+	String csrfToken = (String) session.getAttribute("csrfToken");
 	
 	if (jobName != null) {
 		//Check if specified jobName is in correct format
@@ -46,7 +54,9 @@
 	//Path rootDir = Path.of(getServletContext().getRealPath("/")).getRoot();
 	//Path defaultDataRoot = Path.of(rootDir.toString(), "synclite", "workDir");
 	Path defaultBasePath = Path.of(System.getProperty("user.home"), "synclite", jobName, "db");
-	basePath = defaultBasePath.toString();
+	if (basePath == null || basePath.trim().isEmpty()) {
+		basePath = defaultBasePath.toString();
+	}
 %>
 
 <body>
@@ -55,20 +65,21 @@
 		<h2>Configure SyncLite Sample Application</h2>
 		<%	
 		if (errorMsg != null) {
-			out.println("<h4 style=\"color: red;\">" + errorMsg + "</h4>");
+			out.println("<h4 style=\"color: red;\">" + escHtml(errorMsg) + "</h4>");
 		}
 		%>
 	
 		<form method="post" action="validateDBDirectory">
+			<input type="hidden" name="csrfToken" value="<%=escHtml(csrfToken)%>"/>
 			<table>
 				<tbody>
 					<tr>
 						<td>Job Name</td>
-						<td><input type="text" size = 30 id="jobName" name="jobName" value="<%=jobName%>" onchange="this.form.action='selectDBDirectory.jsp'; this.form.submit();" title="Specify SyncLite consolidator job name. Make sure that the job name specified here is same as the one specified in SyncLite Consolidator"/></td>
+						<td><input type="text" size = 30 id="jobName" name="jobName" value="<%=escHtml(jobName)%>" onchange="this.form.action='selectDBDirectory.jsp'; this.form.submit();" title="Specify SyncLite consolidator job name. Make sure that the job name specified here is same as the one specified in SyncLite Consolidator"/></td>
 					</tr>
 					<tr>
 						<td>DB Base Path</td>
-						<td><input type="text" size = 50 id="basePath" name="basePath" value="<%=basePath%>" title="Specify a work directory for SyncLite dbreader to store SyncLite devices holding extracted data frpom source database."/></td>
+						<td><input type="text" size = 50 id="basePath" name="basePath" value="<%=escHtml(basePath)%>" title="Specify a work directory for SyncLite dbreader to store SyncLite devices holding extracted data from source database."/></td>
 					</tr>
 				</tbody>
 			</table>
