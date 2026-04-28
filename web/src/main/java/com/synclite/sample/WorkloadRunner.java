@@ -177,49 +177,49 @@ public class WorkloadRunner extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsHyperSQL(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
-			} else if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
-				Class.forName("io.synclite.logger.SQLiteAppender");
+			} else if (deviceType.equals("SQLITE_STORE")) {
+				Class.forName("io.synclite.logger.SQLiteStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
 					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsSQLiteAppender(deviceIdx, finalBasePath, finalWorkload));
+					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsSQLiteStore(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DUCKDB_STORE")) {
-				Class.forName("io.synclite.logger.DuckDBAppender");
+				Class.forName("io.synclite.logger.DuckDBStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
 					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDuckDBAppender(deviceIdx, finalBasePath, finalWorkload));
+					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDuckDBStore(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DERBY_STORE")) {
-				Class.forName("io.synclite.logger.DerbyAppender");
+				Class.forName("io.synclite.logger.DerbyStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
 					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDerbyAppender(deviceIdx, finalBasePath, finalWorkload));
+					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsDerbyStore(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("H2_STORE")) {
-				Class.forName("io.synclite.logger.H2Appender");
+				Class.forName("io.synclite.logger.H2Store");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
 					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsH2Appender(deviceIdx, finalBasePath, finalWorkload));
+					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsH2Store(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("HYPERSQL_STORE")) {
-				Class.forName("io.synclite.logger.HyperSQLAppender");
+				Class.forName("io.synclite.logger.HyperSQLStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
 					final String finalWorkload = workload;
-					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsHyperSQLAppender(deviceIdx, finalBasePath, finalWorkload));
+					Future<Void> future = fixedPoolExecutor.submit(() -> runDMLsHyperSQLStore(deviceIdx, finalBasePath, finalWorkload));
 					futureList.add(future);
 				}
 			}
@@ -282,6 +282,17 @@ public class WorkloadRunner extends HttpServlet {
 		return null;
 	}
 
+	private Void runDMLsSQLiteStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
+		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
+		String url = "jdbc:synclite_sqlite_store:" + devicePath;
+		try (Connection conn = DriverManager.getConnection(url)) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(workload);
+			}	
+		} 
+		return null;
+	}
+
 	private Void runDMLsDuckDB(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_duckdb:" + devicePath;
@@ -296,6 +307,17 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDuckDBAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_duckdb_appender:" + devicePath;
+		try (Connection conn = DriverManager.getConnection(url)) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(workload);
+			}	
+		} 
+		return null;
+	}
+
+	private Void runDMLsDuckDBStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
+		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
+		String url = "jdbc:synclite_duckdb_store:" + devicePath;
 		try (Connection conn = DriverManager.getConnection(url)) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
@@ -326,6 +348,17 @@ public class WorkloadRunner extends HttpServlet {
 		return null;
 	}
 
+	private Void runDMLsDerbyStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
+		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
+		String url = "jdbc:synclite_derby_store:" + devicePath;
+		try (Connection conn = DriverManager.getConnection(url)) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(workload);
+			}	
+		} 
+		return null;
+	}
+
 	private Void runDMLsH2(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_h2:" + devicePath;
@@ -348,6 +381,17 @@ public class WorkloadRunner extends HttpServlet {
 		return null;
 	}
 
+	private Void runDMLsH2Store(Integer deviceIndex, String basePath, String workload) throws SQLException {
+		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
+		String url = "jdbc:synclite_h2_store:" + devicePath;
+		try (Connection conn = DriverManager.getConnection(url)) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(workload);
+			}	
+		} 
+		return null;
+	}
+
 	private Void runDMLsHyperSQL(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_hsqldb:" + devicePath;
@@ -362,6 +406,17 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsHyperSQLAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_hsqldb_appender:" + devicePath;
+		try (Connection conn = DriverManager.getConnection(url)) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(workload);
+			}	
+		} 
+		return null;
+	}
+
+	private Void runDMLsHyperSQLStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
+		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
+		String url = "jdbc:synclite_hsqldb_store:" + devicePath;
 		try (Connection conn = DriverManager.getConnection(url)) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);

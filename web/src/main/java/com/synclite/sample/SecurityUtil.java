@@ -32,7 +32,7 @@ final class SecurityUtil {
 
     private static final Set<String> ALLOWED_DEVICE_TYPES = new HashSet<>(Arrays.asList(
         "STREAMING", "SQLITE", "DUCKDB", "DERBY", "H2", "HYPERSQL",
-        "SQLITE_STORE", "SQLOTE_STORE", "DUCKDB_STORE", "DERBY_STORE", "H2_STORE", "HYPERSQL_STORE"
+        "SQLITE_STORE", "DUCKDB_STORE", "DERBY_STORE", "H2_STORE", "HYPERSQL_STORE"
     ));
 
     private SecurityUtil() {

@@ -130,34 +130,34 @@ public class DeviceCreator extends HttpServlet {
 					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}	
-			} else if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
+			} else if (deviceType.equals("SQLITE_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteAppenderDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteStoreDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DUCKDB_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBAppenderDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBStoreDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 			 	}
 			} else if (deviceType.equals("DERBY_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyAppenderDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyStoreDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("H2_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initH2AppenderDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initH2StoreDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("HYPERSQL_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLAppenderDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLStoreDevice(deviceIdx, basePath, propsPath.toString()));
 					futureList.add(future);
 				}
 			}
@@ -227,6 +227,17 @@ public class DeviceCreator extends HttpServlet {
 		} catch (Exception e) {
 			throw e;
 		}
+	}
+
+	private Void initSQLiteStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+		try {
+			Class.forName("io.synclite.logger.SQLiteStore");
+			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
+			SQLiteStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
 	} 
 
 	private Void initDuckDBDevice(int i, Path basePath, String propsPath) throws Exception {
@@ -245,6 +256,17 @@ public class DeviceCreator extends HttpServlet {
 			Class.forName("io.synclite.logger.DuckDBAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DuckDBAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	private Void initDuckDBStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+		try {
+			Class.forName("io.synclite.logger.DuckDBStore");
+			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
+			DuckDBStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -273,6 +295,17 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
+	private Void initDerbyStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+		try {
+			Class.forName("io.synclite.logger.DerbyStore");
+			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
+			DerbyStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
 	private Void initH2Device(int i, Path basePath, String propsPath) throws Exception {
 		try {
 			Class.forName("io.synclite.logger.H2");
@@ -295,6 +328,17 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
+	private Void initH2StoreDevice(int i, Path basePath, String propsPath) throws Exception {
+		try {
+			Class.forName("io.synclite.logger.H2Store");
+			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
+			H2Store.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
 	private Void initHyperSQLDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
 			Class.forName("io.synclite.logger.HyperSQL");
@@ -311,6 +355,17 @@ public class DeviceCreator extends HttpServlet {
 			Class.forName("io.synclite.logger.HyperSQLAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			HyperSQLAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			return null;
+		} catch (Exception e) {
+			throw e;
+		}
+	}
+
+	private Void initHyperSQLStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+		try {
+			Class.forName("io.synclite.logger.HyperSQLStore");
+			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
+			HyperSQLStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
 		} catch (Exception e) {
 			throw e;

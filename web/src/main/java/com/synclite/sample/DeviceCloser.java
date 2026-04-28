@@ -56,18 +56,23 @@ public class DeviceCloser extends HttpServlet {
 		try {
 			SQLite.closeAllDevices();
 			SQLiteAppender.closeAllDevices();
+			SQLiteStore.closeAllDevices();
 
 			DuckDB.closeAllDevices();
 			DuckDBAppender.closeAllDevices();
+			DuckDBStore.closeAllDevices();
 			
 			Derby.closeAllDevices();
 			DerbyAppender.closeAllDevices();
+			DerbyStore.closeAllDevices();
 			
 			H2.closeAllDevices();
 			H2Appender.closeAllDevices();
+			H2Store.closeAllDevices();
 			
 			HyperSQL.closeAllDevices();
 			HyperSQLAppender.closeAllDevices();
+			HyperSQLStore.closeAllDevices();
 			
 			Streaming.closeAllDevices();
 			request.getRequestDispatcher("stopDevices.jsp?closeStatus=SUCCESS&closeStatusDetails=;").forward(request, response);
