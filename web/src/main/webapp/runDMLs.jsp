@@ -138,7 +138,7 @@ String sampleSQL = "--SQL DML/DDL Statements--\n\nCREATE TABLE t1(a INT);\nINSER
 								} else {
 									out.println("<option value=\"SQLITE\">SQLite</option>");
 								}
-								if (deviceType.equals("SQLITE_STORE") || deviceType.equals("SQLOTE_STORE")) {
+								if (deviceType.equals("SQLITE_STORE")) {
 									out.println("<option value=\"SQLITE_STORE\" selected>SQLite Store</option>");
 								} else {
 									out.println("<option value=\"SQLITE_STORE\">SQLite Store</option>");

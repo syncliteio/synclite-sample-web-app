@@ -1,139 +1,112 @@
-# Title
-Security hardening, device-type normalization, and dependency refresh for sample web app
+# PR Description — synclite-sample-web-app
 
-# Summary
-This PR strengthens request and session security across the web app, replaces unsafe request/response handling patterns, modernizes key Maven dependencies, and aligns device type naming to BASE and STORE variants.
+## Summary
 
-The change set includes:
-- New servlet filter for security headers and CSRF enforcement.
-- New shared security utility for parameter validation, path normalization, URL-safe error forwarding, and allowed device-type validation.
-- Servlet hardening in directory validation, device creation, device closure, and workload execution.
-- JSP output encoding and CSRF hidden token integration.
-- Device type option migration from APPENDER naming to STORE naming, with compatibility for SQLOTE_STORE where currently present.
-- Maven dependency upgrades and cleanup.
-- Web session configuration hardening in deployment descriptor.
-- Eclipse project metadata updates for annotation processing and resource filtering.
+This PR fixes critical functional bugs in STORE device-type routing, completes resource cleanup for STORE device types in `DeviceCloser`, corrects a device-type constant typo, updates JDBC driver dependencies, and rewrites the module README.
 
-# What Changed
+---
 
-## 1. Security filter and utility additions
-Added:
-- web/src/main/java/com/synclite/sample/SecurityHeadersAndCSRFFilter.java
-- web/src/main/java/com/synclite/sample/SecurityUtil.java
+## Changes by File
 
-Details:
-- Adds response headers: X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and no-cache headers.
-- Generates and stores CSRF token in session if missing.
-- Rejects POST requests with invalid or missing CSRF token.
-- Centralizes input validation helpers (required text, positive integer range, device type whitelist).
-- Centralizes error sanitization and URL encoding for safe forwarding.
+### `web/pom.xml` — Dependency updates
 
-## 2. Web descriptor security configuration
-Updated:
-- web/src/main/webapp/WEB-INF/web.xml
+| Dependency | Before | After |
+|---|---|---|
+| `org.xerial:sqlite-jdbc` | 3.45.3.0 | **3.53.0.0** |
+| `org.duckdb:duckdb_jdbc` | 1.0.0 | **1.5.2.0** |
 
-Details:
-- Registers SecurityHeadersAndCSRFFilter on all routes.
-- Changes session timeout from unlimited to 30 minutes.
-- Enforces cookie-only session tracking.
-- Enables HttpOnly and Secure session cookies.
+Both updates align this module with all other SyncLite submodules.
 
-## 3. Servlet hardening and behavior fixes
-Updated:
-- web/src/main/java/com/synclite/sample/ValidateDBDirectory.java
-- web/src/main/java/com/synclite/sample/DeviceCreator.java
-- web/src/main/java/com/synclite/sample/DeviceCloser.java
-- web/src/main/java/com/synclite/sample/WorkloadRunner.java
+---
 
-Details:
-- Replaces direct console printing with java.util.logging.
-- Uses safer message handling and URL-encoded error forwarding.
-- Validates/normalizes base directory path and ensures directory existence.
-- Rotates session id after DB directory setup to reduce session fixation risk.
-- Reworks doGet/doPost patterns to avoid recursive calls and side effects.
-- Adds executor shutdown and interruption-safe cleanup in finally blocks.
-- Adds bounds and size checks (max devices/workload length).
-- Removes Telemetry-specific initialization and workload execution paths and switches closure path to DBLogger.
-- Aligns device type handling to STORE naming in server-side logic.
+### `src/.../DeviceCreator.java` — Critical bug fix: STORE device types calling Appender init
 
-## 4. JSP encoding, CSRF wiring, and UX text improvements
-Updated:
-- web/src/main/webapp/selectDBDirectory.jsp
-- web/src/main/webapp/createDevices.jsp
-- web/src/main/webapp/runDMLs.jsp
-- web/src/main/webapp/queryDevice.jsp
-- web/src/main/webapp/stopDevices.jsp
+**Bug description:**
 
-Details:
-- Adds OWASP Encoder usage for HTML output escaping.
-- Adds CSRF hidden input to POST forms.
-- Escapes user-controllable values rendered in inputs/messages/tables.
-- Updates device type labels/options from APPENDER to STORE naming.
-- Removes Telemetry option exposure in relevant UI locations.
-- Improves workload/query helper text.
-- Adds read-only query guard in query page to block multi-statement and non-read-only SQL execution.
+All five STORE device types (`SQLITE_STORE`, `DUCKDB_STORE`, `DERBY_STORE`, `H2_STORE`, `HYPERSQL_STORE`) were incorrectly routed to the corresponding Appender initialisation methods:
 
-## 5. Maven dependency updates
-Updated:
-- web/pom.xml
+```java
+case "SQLITE_STORE":
+    initSQLiteAppenderDevice(dbDir, deviceName, deviceConfig);  // WRONG
+    break;
+```
 
-Details:
-- sqlite-jdbc: 3.43.0.0 -> 3.45.3.0
-- javax.servlet-api: 3.0.1 -> 4.0.1
-- JSP API artifact/version updated to javax.servlet.jsp-api 2.3.3
-- commons-io: 2.11.0 -> 2.16.1
-- Removes duplicate legacy sqlite-jdbc entry and adds org.owasp.encoder:encoder:1.3.1
+`SyncLiteAppender.initialize()` configures the device in Appender mode. Appender devices write INSERT/UPDATE/DELETE SQL statements to a log segment and replay them during consolidation. `SyncLiteStore.initialize()` configures the device in Store mode with structured CRUD operations. Calling the Appender initialiser for a STORE device silently produced a device that rejected all structured Store API calls at runtime.
 
-## 6. Project metadata and tooling files
-Updated:
-- web/.classpath
-- web/.project
-- web/.settings/org.eclipse.jdt.core.prefs
+**Fix:**
 
-Added:
-- web/.settings/org.eclipse.jdt.apt.core.prefs
+Five new methods added:
 
-Details:
-- Adds generated source/resource classpath entries and annotation processing metadata.
-- Disables annotation processing in Eclipse preferences.
-- Adds filtered resource patterns in Eclipse project metadata.
+- `initSQLiteStoreDevice(Path dbDir, String deviceName, Path deviceConfig)` — loads `io.synclite.logger.SQLiteStore` via `Class.forName()` and calls `SQLiteStore.initialize(dbPath, deviceConfig)`.
+- `initDuckDBStoreDevice(...)` — same pattern with `DuckDBStore`.
+- `initDerbyStoreDevice(...)` — same pattern with `DerbyStore`.
+- `initH2StoreDevice(...)` — same pattern with `H2Store`.
+- `initHyperSQLStoreDevice(...)` — same pattern with `HyperSQLStore`.
 
-## 7. Minor formatting change
-Updated:
-- web/src/main/webapp/css/SyncLiteStyle.css
+Each case statement now routes to the correct Store-specific method.
 
-Details:
-- Whitespace-only indentation adjustment.
+**Typo fix:**
 
-# Compatibility and Migration Notes
-- Device type values previously using APPENDER naming are now represented as STORE variants in UI and backend condition branches.
-- Existing compatibility check for SQLOTE_STORE remains accepted where present.
-- Telemetry device path has been removed from creation and workload execution flows.
+`"SQLOTE_STORE"` ? `"SQLITE_STORE"` in the switch condition. The typo caused the SQLite Store case to never match, so SQLite Store devices were silently skipped during creation.
 
-# Risk Assessment
-- Security posture is significantly improved; however, enabling Secure session cookies assumes HTTPS in target deployment.
-- Device type rename can affect any external automation or bookmarked URLs that still use APPENDER values.
-- Query page behavior is intentionally stricter due to read-only SQL enforcement.
+---
 
-# Test Plan
-- Validate CSRF protection:
-	- Submit each POST-backed form with valid token (expect success path).
-	- Submit POST without token or with invalid token (expect HTTP 403).
-- Validate output encoding:
-	- Inject angle brackets and script-like text into user inputs and confirm escaped rendering.
-- Validate device workflows:
-	- Create devices for each supported type.
-	- Run workload on a bounded index range.
-	- Close devices and confirm success/error handling routes.
-- Validate query workflow:
-	- Run allowed read-only queries.
-	- Confirm rejection of multi-statement or write statements.
-- Validate session behavior:
-	- Confirm session timeout and cookie flags in deployed environment over HTTPS.
+### `src/.../DeviceCloser.java` — Added `closeAllDevices()` for STORE device types
 
-# Reviewer Focus Areas
-- SecurityHeadersAndCSRFFilter coverage and CSRF POST assumptions.
-- Device type normalization and backward compatibility impacts.
-- Error forwarding and message safety across servlet-to-JSP flows.
-- Any remaining references expecting APPENDER or Telemetry semantics.
+`closeAllDevices()` was called for all Appender device types but was missing for every STORE device type. Devices left open without `closeAllDevices()` do not flush their final transaction to the log segment, meaning the last batch of changes could be lost at application shutdown.
 
+Added `closeAllDevices()` calls for all five STORE types:
+
+```java
+SQLiteStore.closeAllDevices();
+DuckDBStore.closeAllDevices();
+DerbyStore.closeAllDevices();
+H2Store.closeAllDevices();
+HyperSQLStore.closeAllDevices();
+```
+
+Each call uses the same reflection-based class loading pattern already used for Appender types, so the SyncLite logger JAR does not need to be on the compile-time classpath.
+
+---
+
+### `src/.../WorkloadRunner.java` — Critical bug fix: STORE device types using Appender JDBC URLs
+
+**Bug description:**
+
+All five STORE device types were constructing JDBC connection URLs using the Appender scheme and loading Appender driver classes:
+
+```java
+case "SQLITE_STORE":
+    String url = "jdbc:synclite_sqlite:" + dbPath;       // WRONG: Appender URL
+    Class.forName("io.synclite.logger.SQLiteAppender");   // WRONG: Appender class
+    runDMLsGeneric(url, ...);
+    break;
+```
+
+`jdbc:synclite_sqlite:` is the URL scheme for the `SQLiteAppender` driver. The correct URL scheme for the `SQLiteStore` driver is `jdbc:synclite_sqlite_store:`. As a result, all DML operations executed against STORE devices were actually logged through the Appender driver, producing incorrect replicated data (INSERT/UPDATE/DELETE SQL text in the log rather than structured change records).
+
+**Fix:**
+
+Five new methods added, each using the correct JDBC URL and driver class:
+
+| Method | JDBC URL | Driver class |
+|---|---|---|
+| `runDMLsSQLiteStore(...)` | `jdbc:synclite_sqlite_store:` | `io.synclite.logger.SQLiteStore` |
+| `runDMLsDuckDBStore(...)` | `jdbc:synclite_duckdb_store:` | `io.synclite.logger.DuckDBStore` |
+| `runDMLsDerbyStore(...)` | `jdbc:synclite_derby_store:` | `io.synclite.logger.DerbyStore` |
+| `runDMLsH2Store(...)` | `jdbc:synclite_h2_store:` | `io.synclite.logger.H2Store` |
+| `runDMLsHyperSQLStore(...)` | `jdbc:synclite_hypersql_store:` | `io.synclite.logger.HyperSQLStore` |
+
+**Typo fix:**
+
+Same `"SQLOTE_STORE"` ? `"SQLITE_STORE"` typo corrected in `WorkloadRunner`'s switch statement.
+
+---
+
+### `README.md` — Comprehensive rewrite
+
+- Architecture overview updated: describes STORE vs. Appender device types and when to use each.
+- Quick Start section: end-to-end example using `SQLiteStore` API via the sample web app.
+- Device creation table: all 10 device types listed with correct display names.
+- Build and run instructions verified against current Maven coordinates.
+- Outbound links to synclite-logger-java README and synclite-consolidator README added.
