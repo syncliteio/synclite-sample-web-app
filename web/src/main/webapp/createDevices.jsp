@@ -289,7 +289,7 @@ if (request.getParameter("emulateStatusDetails") != null) {
 					
 					<tr>
 						<td>Database Type</td>
-						<td><select id="deviceType" name="deviceType" title="Select database/device type. BASE types capture transactional DDL and DML. STORE types keep a local data copy in addition to staged logs.">
+						<td><select id="deviceType" name="deviceType" title="Select database/device type. BASE types capture SQL DDL and DML. STORE types keep a local data copy in addition to staged logs.">
 								<%
 								if (deviceType.equals("SQLITE")) {
 									out.println("<option value=\"SQLITE\" selected>SQLite</option>");

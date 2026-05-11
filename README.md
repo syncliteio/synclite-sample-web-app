@@ -54,7 +54,7 @@ The JSP/Servlet source is in `web/src/`. Key entry points:
 - `web/src/main/java/` — Servlet handlers and SyncLite Logger integration code
 - `web/src/main/resources/synclite_logger.conf` — sample logger configuration
 
-This source code is the best starting point if you want to see exactly how to initialize SyncLite Logger, manage connections, and execute transactional SQL from a web application.
+This source code is the best starting point if you want to see exactly how to initialize SyncLite Logger, manage connections, and execute SQL (with transactions) from a web application.
 
 ## Build
 
@@ -74,9 +74,9 @@ Built WAR: `web/target/synclite-sample-app-oss.war`
 
 ## Documentation & Community
 
-- Full documentation: https://www.synclite.io/resources/documentation
+- Full documentation: https://github.com/syncliteio/SyncLite/blob/main/DOCUMENTATION.md
 - Website: https://www.synclite.io
-- Slack: https://join.slack.com/t/syncliteworkspace/shared_invite/zt-2pz945vva-uuKapsubC9Mu~uYDRKo6Jw
+- Community: https://github.com/syncliteio/SyncLite/issues
 
 ---
 
