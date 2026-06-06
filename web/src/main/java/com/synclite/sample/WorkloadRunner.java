@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -263,7 +264,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsSQLite(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_sqlite:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -274,7 +275,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsSQLiteAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_sqlite_appender:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -285,7 +286,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsSQLiteStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_sqlite_store:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -296,7 +297,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDuckDB(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_duckdb:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -307,7 +308,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDuckDBAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_duckdb_appender:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -318,7 +319,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDuckDBStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_duckdb_store:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -329,7 +330,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDerby(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_derby:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -340,7 +341,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDerbyAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_derby_appender:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -351,7 +352,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsDerbyStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_derby_store:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -362,7 +363,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsH2(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_h2:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -373,7 +374,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsH2Appender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_h2_appender:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -384,7 +385,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsH2Store(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_h2_store:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -395,7 +396,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsHyperSQL(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_hsqldb:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -406,7 +407,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsHyperSQLAppender(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_hsqldb_appender:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -417,7 +418,7 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsHyperSQLStore(Integer deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_hsqldb_store:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}	
@@ -428,12 +429,19 @@ public class WorkloadRunner extends HttpServlet {
 	private Void runDMLsStreaming(int deviceIndex, String basePath, String workload) throws SQLException {
 		Path devicePath = Path.of(basePath.toString(), String.valueOf(deviceIndex));
 		String url = "jdbc:synclite_streaming:" + devicePath;
-		try (Connection conn = DriverManager.getConnection(url)) {
+		try (Connection conn = DriverManager.getConnection(url, buildSyncLiteConnectionProps(basePath, deviceIndex))) {
 			try (Statement stmt = conn.createStatement()) {
 				stmt.execute(workload);
 			}
 		} 
 		return null;
+	}
+
+	private Properties buildSyncLiteConnectionProps(String basePath, int deviceIndex) {
+		Properties props = new Properties();
+		props.setProperty("config", Path.of(basePath, "synclite.conf").toString());
+		props.setProperty("device-name", String.valueOf(deviceIndex));
+		return props;
 	}
 
 }

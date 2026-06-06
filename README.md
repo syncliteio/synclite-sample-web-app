@@ -29,21 +29,21 @@ Then open: http://localhost:8080/synclite-sample-app
 | Device creation | Create one or many SyncLite devices (SQLite, DuckDB, Derby, H2, HyperSQL, Streaming) |
 | SQL workload execution | Run configurable INSERT / UPDATE / DELETE workloads on N devices in parallel |
 | Multi-device consolidation | Watch hundreds of devices consolidating into a single destination DB |
-| Configuration | Shows how to pass a `synclite_logger.conf` to `SyncLite.initialize()` |
+| Configuration | Shows how to pass a `synclite.conf` to `SyncLite.initialize()` |
 
 ## Architecture
 
 ```
-Browser  ──HTTP──▶  SyncLite Sample Web App (Tomcat)
+Browser  --HTTP-->  SyncLite Sample Web App (Tomcat)
                          │  SyncLite Logger (embedded JDBC)
-                         ▼
+                         v
                    Edge Databases (SQLite / DuckDB / …)
                          │  sync log files
-                         ▼
+                         v
                    Local staging directory
                          │
-                         ▼
-                   SyncLite Consolidator  ──▶  Destination DB
+                         v
+                   SyncLite Consolidator  -->  Destination DB
 ```
 
 ## Source Code
@@ -52,7 +52,7 @@ The JSP/Servlet source is in `web/src/`. Key entry points:
 
 - `web/src/main/webapp/` — JSP views (create device, run workload, dashboard)
 - `web/src/main/java/` — Servlet handlers and SyncLite Logger integration code
-- `web/src/main/resources/synclite_logger.conf` — sample logger configuration
+- `web/src/main/resources/synclite.conf` — sample logger configuration
 
 This source code is the best starting point if you want to see exactly how to initialize SyncLite Logger, manage connections, and execute SQL (with transactions) from a web application.
 

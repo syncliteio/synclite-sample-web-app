@@ -88,16 +88,21 @@ if (request.getParameter("deviceType") != null) {
 String props = "";
 if (request.getParameter("props") != null) {
 	props =  request.getParameter("props");
-} else if (Files.exists(Path.of(basePath, "synclite_logger.conf"))) { 
+} else if (Files.exists(Path.of(basePath, "synclite.conf"))) {
+	props = Files.readString(Path.of(basePath, "synclite.conf"));
+} else if (Files.exists(Path.of(basePath, "synclite_logger.conf"))) {
 	props = Files.readString(Path.of(basePath, "synclite_logger.conf"));
 } else {
 	
-	//Check if synclite_logger.conf exists in dbpath, if yes load it.
+	//Check if synclite.conf (or legacy synclite_logger.conf) exists in dbpath, if yes load it.
 	
-	Path confPath = Path.of(basePath.toString(), "synclite_logger.conf");
+	Path confPath = Path.of(basePath.toString(), "synclite.conf");
+	Path legacyConfPath = Path.of(basePath.toString(), "synclite_logger.conf");
 
 	if (Files.exists(confPath)) {
 		props = Files.readString(confPath);
+	} else if (Files.exists(legacyConfPath)) {
+		props = Files.readString(legacyConfPath);
 	} else {
 		StringBuilder propsBuilder = new StringBuilder();
 		String newLine = System.getProperty("line.separator");
@@ -115,9 +120,9 @@ if (request.getParameter("props") != null) {
 		propsBuilder.append(newLine);
 		propsBuilder.append("#local-command-stage-directory=<path/to/local/command/stage/directory  #specify if device command handler is enabled>");
 		propsBuilder.append(newLine);
-		propsBuilder.append("destination-type=FS");
+		propsBuilder.append("device-stage-type=FS");
 		propsBuilder.append(newLine);
-		propsBuilder.append("#destination-type=<FS|MS_ONEDRIVE|GOOGLE_DRIVE|SFTP|MINIO|KAFKA|S3>");
+		propsBuilder.append("#device-stage-type=<FS|MS_ONEDRIVE|GOOGLE_DRIVE|SFTP|MINIO|KAFKA|S3>");
 		propsBuilder.append(newLine);
 		propsBuilder.append(newLine);
 		propsBuilder.append("#==============SFTP Configuration=================");
@@ -351,7 +356,7 @@ if (request.getParameter("emulateStatusDetails") != null) {
 					</tr>
 					<tr>
 						<td>Device Configuration Manager</td>
-						<td><textarea name="props" id="props" rows="25" cols="100" title="Edit SyncLite device configuration. The content is saved as synclite_logger.conf in the selected base path and used to initialize all created devices. Defaults include local stage and destination settings."><%=escHtml(props)%></textarea>
+						<td><textarea name="props" id="props" rows="25" cols="100" title="Edit SyncLite device configuration. The content is saved as synclite.conf in the selected base path and used to initialize all created devices. Defaults include local stage and destination settings."><%=escHtml(props)%></textarea>
 						</td>
 					</tr>
 					
