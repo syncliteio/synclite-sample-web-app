@@ -85,7 +85,7 @@ public class DeviceCreator extends HttpServlet {
 			int numDevices = SecurityUtil.getRequiredPositiveInt(request, "numDevices", MAX_DEVICES);
 
 			//Save the contents of props into base_path/synclite.props file
-			Path propsPath = basePath.resolve("synclite_logger.conf");
+			Path propsPath = basePath.resolve("synclite.conf");
 			Files.writeString(propsPath, props, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
 					StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 

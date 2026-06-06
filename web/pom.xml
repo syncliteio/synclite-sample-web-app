@@ -8,6 +8,7 @@
 	<packaging>war</packaging>
 	
 	<properties>
+		<revision>oss</revision>
 		<synclite-logger.version>${revision}</synclite-logger.version>
 	</properties>
 	<build>
@@ -89,7 +90,7 @@
 
 		<dependency>
 			<groupId>io.synclite</groupId>
-			<artifactId>synclite-logger</artifactId>
+			<artifactId>synclite</artifactId>
 			<version>${synclite-logger.version}</version>
 			<!-- <systemPath>E:\SyncLiteWorkspaces\SyncLiteSampleApp\web\src\main\resources\logger-03.08.2022-jar-with-dependencies.jar</systemPath> -->			
 			<!-- <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/logger-27.09.2022-jar-with-dependencies.jar</systemPath> -->
