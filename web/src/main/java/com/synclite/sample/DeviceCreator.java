@@ -36,7 +36,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.synclite.logger.*;
+import io.synclite.*;
 
 /**
  * Servlet implementation class InitDevices
@@ -198,7 +198,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initStreamingDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.Streaming");
+			Class.forName("io.synclite.Streaming");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			Streaming.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -209,7 +209,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initSQLiteDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.SQLite");
+			Class.forName("io.synclite.SQLite");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			SQLite.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -220,7 +220,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initSQLiteAppenderDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.SQLiteAppender");
+			Class.forName("io.synclite.SQLiteAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			SQLiteAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -231,7 +231,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initSQLiteStoreDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.SQLiteStore");
+			Class.forName("io.synclite.SQLiteStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			SQLiteStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -242,7 +242,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDuckDBDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.DuckDB");
+			Class.forName("io.synclite.DuckDB");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DuckDB.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -253,7 +253,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDuckDBAppenderDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.DuckDBAppender");
+			Class.forName("io.synclite.DuckDBAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DuckDBAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -264,7 +264,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDuckDBStoreDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.DuckDBStore");
+			Class.forName("io.synclite.DuckDBStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DuckDBStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -275,7 +275,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDerbyDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.Derby");
+			Class.forName("io.synclite.Derby");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			Derby.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -286,7 +286,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDerbyAppenderDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.DerbyAppender");
+			Class.forName("io.synclite.DerbyAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DerbyAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -297,7 +297,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initDerbyStoreDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.DerbyStore");
+			Class.forName("io.synclite.DerbyStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			DerbyStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -308,7 +308,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initH2Device(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.H2");
+			Class.forName("io.synclite.H2");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			H2.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -319,7 +319,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initH2AppenderDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.H2Appender");
+			Class.forName("io.synclite.H2Appender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			H2Appender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -330,7 +330,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initH2StoreDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.H2Store");
+			Class.forName("io.synclite.H2Store");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			H2Store.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -341,7 +341,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initHyperSQLDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.HyperSQL");
+			Class.forName("io.synclite.HyperSQL");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			HyperSQL.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -352,7 +352,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initHyperSQLAppenderDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.HyperSQLAppender");
+			Class.forName("io.synclite.HyperSQLAppender");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			HyperSQLAppender.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
@@ -363,7 +363,7 @@ public class DeviceCreator extends HttpServlet {
 
 	private Void initHyperSQLStoreDevice(int i, Path basePath, String propsPath) throws Exception {
 		try {
-			Class.forName("io.synclite.logger.HyperSQLStore");
+			Class.forName("io.synclite.HyperSQLStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
 			HyperSQLStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
 			return null;
