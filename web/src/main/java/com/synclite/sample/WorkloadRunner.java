@@ -38,7 +38,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import io.synclite.logger.*;
+import io.synclite.*;
 
 /**
  * Servlet implementation class WorkloadRunner
@@ -125,7 +125,7 @@ public class WorkloadRunner extends HttpServlet {
 
 			long startTime = System.currentTimeMillis();
 			if (deviceType.equals("STREAMING")) {
-				Class.forName("io.synclite.logger.Streaming");
+				Class.forName("io.synclite.Streaming");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -134,7 +134,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("SQLITE")){
-				Class.forName("io.synclite.logger.SQLite");
+				Class.forName("io.synclite.SQLite");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx ; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -143,7 +143,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DUCKDB")){
-				Class.forName("io.synclite.logger.DuckDB");
+				Class.forName("io.synclite.DuckDB");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx ; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -152,7 +152,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DERBY")){
-				Class.forName("io.synclite.logger.Derby");
+				Class.forName("io.synclite.Derby");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx ; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -161,7 +161,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("H2")){
-				Class.forName("io.synclite.logger.H2");
+				Class.forName("io.synclite.H2");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx ; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -170,7 +170,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("HYPERSQL")){
-				Class.forName("io.synclite.logger.HyperSQL");
+				Class.forName("io.synclite.HyperSQL");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx ; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -179,7 +179,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("SQLITE_STORE")) {
-				Class.forName("io.synclite.logger.SQLiteStore");
+				Class.forName("io.synclite.SQLiteStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -188,7 +188,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DUCKDB_STORE")) {
-				Class.forName("io.synclite.logger.DuckDBStore");
+				Class.forName("io.synclite.DuckDBStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -197,7 +197,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DERBY_STORE")) {
-				Class.forName("io.synclite.logger.DerbyStore");
+				Class.forName("io.synclite.DerbyStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -206,7 +206,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("H2_STORE")) {
-				Class.forName("io.synclite.logger.H2Store");
+				Class.forName("io.synclite.H2Store");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
@@ -215,7 +215,7 @@ public class WorkloadRunner extends HttpServlet {
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("HYPERSQL_STORE")) {
-				Class.forName("io.synclite.logger.HyperSQLStore");
+				Class.forName("io.synclite.HyperSQLStore");
 				for (Integer i = startDeviceIdx; i <= endDeviceIdx; ++i) {
 					final Integer deviceIdx = i;
 					final String finalBasePath = basePath;
