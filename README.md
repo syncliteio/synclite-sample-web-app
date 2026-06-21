@@ -60,7 +60,7 @@ This source code is the best starting point if you want to see exactly how to in
 
 ```bash
 cd synclite-sample-web-app/web
-mvn -Drevision=oss clean install
+mvn -Drevision=1.0.0 clean install
 ```
 
 Built WAR: `web/target/synclite-sample-app-oss.war`
