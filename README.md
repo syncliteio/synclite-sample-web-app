@@ -63,7 +63,7 @@ cd synclite-sample-web-app/web
 mvn -Drevision=1.0.0 clean install
 ```
 
-Built WAR: `web/target/synclite-sample-app-oss.war`
+Built WAR: `web/target/synclite-sample-app-1.0.0.war`
 
 ## Related Components
 
