@@ -37,6 +37,71 @@
 <link rel="stylesheet" href=css/SyncLiteStyle.css>
 
 <script type="text/javascript">
+function toggleDstFields() {
+	var dstType = document.getElementById("dstType");
+	var dstTypeVal = dstType ? dstType.value : "SQLITE";
+	var dbFields = document.getElementsByClassName("dst-db-field");
+	var schemaFields = document.getElementsByClassName("dst-schema-field");
+	var showDb = (dstTypeVal === "DUCKDB" || dstTypeVal === "POSTGRES");
+	var showSchema = (dstTypeVal === "POSTGRES");
+	var i;
+	for (i = 0; i < dbFields.length; i++) {
+		dbFields[i].style.display = showDb ? "" : "none";
+	}
+	for (i = 0; i < schemaFields.length; i++) {
+		schemaFields[i].style.display = showSchema ? "" : "none";
+	}
+}
+
+function toggleEmbeddedFields() {
+	var consolidatorType = document.getElementById("consolidatorType");
+	var embedded = consolidatorType && consolidatorType.value === "EMBEDDED";
+	var fields = document.getElementsByClassName("embedded-field");
+	for (var i = 0; i < fields.length; i++) {
+		fields[i].style.display = embedded ? "" : "none";
+	}
+	if (embedded) {
+		toggleDstFields();
+	}
+}
+
+// Populate the connection string, database and schema fields with
+// sensible per-destination-type defaults. When 'force' is true the
+// current values are overwritten (used on destination-type change);
+// otherwise only empty fields are filled (used on initial page load
+// so user/session values are preserved).
+function applyDstDefaults(force) {
+	var dstType = document.getElementById("dstType");
+	if (!dstType || !window.DST_DEFAULTS) {
+		return;
+	}
+	var defs = window.DST_DEFAULTS[dstType.value];
+	if (!defs) {
+		return;
+	}
+	var conn = document.getElementById("dstConnectionString");
+	var db = document.getElementById("dstDatabase");
+	var schema = document.getElementById("dstSchema");
+	if (conn && (force || conn.value === "")) {
+		conn.value = defs.connectionString;
+	}
+	if (db && (force || db.value === "")) {
+		db.value = defs.database;
+	}
+	if (schema && (force || schema.value === "")) {
+		schema.value = defs.schema;
+	}
+}
+
+function onDstTypeChange() {
+	applyDstDefaults(true);
+	toggleDstFields();
+}
+
+window.addEventListener("DOMContentLoaded", function() {
+	toggleEmbeddedFields();
+	applyDstDefaults(false);
+});
 </script>
 <title>SyncLite App - Create Databases</title>
 </head>
@@ -83,6 +148,56 @@ if (request.getParameter("deviceType") != null) {
 		deviceType = session.getAttribute("deviceType").toString();
 	}
 }
+
+String consolidatorType = "STANDALONE";
+if (request.getParameter("consolidatorType") != null) {
+	consolidatorType = request.getParameter("consolidatorType");
+} else if (session.getAttribute("consolidatorType") != null) {
+	consolidatorType = session.getAttribute("consolidatorType").toString();
+}
+
+String dstType = "SQLITE";
+if (request.getParameter("dstType") != null) {
+	dstType = request.getParameter("dstType");
+} else if (session.getAttribute("dstType") != null) {
+	dstType = session.getAttribute("dstType").toString();
+}
+
+String dstConnectionString = "";
+if (request.getParameter("dstConnectionString") != null) {
+	dstConnectionString = request.getParameter("dstConnectionString");
+} else if (session.getAttribute("dstConnectionString") != null) {
+	dstConnectionString = session.getAttribute("dstConnectionString").toString();
+}
+
+String dstDatabase = "";
+if (request.getParameter("dstDatabase") != null) {
+	dstDatabase = request.getParameter("dstDatabase");
+} else if (session.getAttribute("dstDatabase") != null) {
+	dstDatabase = session.getAttribute("dstDatabase").toString();
+}
+
+String dstSchema = "";
+if (request.getParameter("dstSchema") != null) {
+	dstSchema = request.getParameter("dstSchema");
+} else if (session.getAttribute("dstSchema") != null) {
+	dstSchema = session.getAttribute("dstSchema").toString();
+}
+
+String syncMode = "CONSOLIDATION";
+if (request.getParameter("syncMode") != null) {
+	syncMode = request.getParameter("syncMode");
+} else if (session.getAttribute("syncMode") != null) {
+	syncMode = session.getAttribute("syncMode").toString();
+}
+
+// Default destination connection strings per destination type, mirroring
+// the SyncLite Consolidator UI. SQLite/DuckDB point at a consolidated
+// database file under the selected base path; PostgreSQL uses a local
+// server template. These feed the client-side auto-populate logic.
+String defaultConnStrSQLite = "jdbc:sqlite:" + Path.of(basePath, "consolidated_db.sqlite") + "?journal_mode=WAL";
+String defaultConnStrDuckDB = "jdbc:duckdb:" + Path.of(basePath, "consolidated_db.duckdb");
+String defaultConnStrPostgreSQL = "jdbc:postgresql://127.0.0.1:5432/synclitedb?user=synclite&password=CHANGE_ME";
 
 
 String props = "";
@@ -250,6 +365,17 @@ if (request.getParameter("emulateStatusDetails") != null) {
 %>
 
 <body>
+	<script type="text/javascript">
+	// Per-destination-type defaults consumed by applyDstDefaults().
+	// database/schema defaults align with DestinationOptions validation:
+	// SQLite forbids both; DuckDB requires database (schema optional);
+	// PostgreSQL requires both database and schema.
+	window.DST_DEFAULTS = {
+		"SQLITE": { connectionString: "<%=Encode.forJavaScript(defaultConnStrSQLite)%>", database: "", schema: "" },
+		"DUCKDB": { connectionString: "<%=Encode.forJavaScript(defaultConnStrDuckDB)%>", database: "main", schema: "" },
+		"POSTGRES": { connectionString: "<%=Encode.forJavaScript(defaultConnStrPostgreSQL)%>", database: "synclitedb", schema: "syncliteschema" }
+	};
+	</script>
 	<%@include file="html/menu.html"%>	
 
 	<div class="main">
@@ -350,6 +476,74 @@ if (request.getParameter("emulateStatusDetails") != null) {
 									out.println("<option value=\"STREAMING\" selected>SyncLite Streaming</option>");
 								} else {
 									out.println("<option value=\"STREAMING\">SyncLite Streaming</option>");
+								}
+								%>
+						</select></td>
+					</tr>
+					<tr>
+						<td>Consolidator Type</td>
+						<td><select id="consolidatorType" name="consolidatorType" onchange="toggleEmbeddedFields()" title="Standalone runs the SyncLite Consolidator as a separate process. Embedded runs the in-process consolidator; you must provide destination details below.">
+								<%
+								if (consolidatorType.equals("STANDALONE")) {
+									out.println("<option value=\"STANDALONE\" selected>Standalone</option>");
+								} else {
+									out.println("<option value=\"STANDALONE\">Standalone</option>");
+								}
+								if (consolidatorType.equals("EMBEDDED")) {
+									out.println("<option value=\"EMBEDDED\" selected>Embedded</option>");
+								} else {
+									out.println("<option value=\"EMBEDDED\">Embedded</option>");
+								}
+								%>
+						</select></td>
+					</tr>
+					<tr class="embedded-field">
+						<td>Destination Type</td>
+						<td><select id="dstType" name="dstType" onchange="onDstTypeChange()" title="Destination backend for the embedded consolidator. SQLite requires only a connection string; DuckDB requires a database; Postgres requires both database and schema.">
+								<%
+								if (dstType.equals("SQLITE")) {
+									out.println("<option value=\"SQLITE\" selected>SQLite</option>");
+								} else {
+									out.println("<option value=\"SQLITE\">SQLite</option>");
+								}
+								if (dstType.equals("DUCKDB")) {
+									out.println("<option value=\"DUCKDB\" selected>DuckDB</option>");
+								} else {
+									out.println("<option value=\"DUCKDB\">DuckDB</option>");
+								}
+								if (dstType.equals("POSTGRES")) {
+									out.println("<option value=\"POSTGRES\" selected>PostgreSQL</option>");
+								} else {
+									out.println("<option value=\"POSTGRES\">PostgreSQL</option>");
+								}
+								%>
+						</select></td>
+					</tr>
+					<tr class="embedded-field">
+						<td>Destination Connection String</td>
+						<td><input type="text" size="60" id="dstConnectionString" name="dstConnectionString" value="<%=escHtml(dstConnectionString)%>" title="Connection string for the destination. Examples: jdbc:sqlite:/path/to/dst.db ; jdbc:duckdb:/path/to/dst.duckdb ; jdbc:postgresql://user:pw@host:5432/db"/></td>
+					</tr>
+					<tr class="embedded-field dst-db-field">
+						<td>Destination Database</td>
+						<td><input type="text" size="30" id="dstDatabase" name="dstDatabase" value="<%=escHtml(dstDatabase)%>" title="Database name. Required for DuckDB and PostgreSQL destinations; leave empty for SQLite."/></td>
+					</tr>
+					<tr class="embedded-field dst-schema-field">
+						<td>Destination Schema</td>
+						<td><input type="text" size="30" id="dstSchema" name="dstSchema" value="<%=escHtml(dstSchema)%>" title="Schema name. Required for PostgreSQL destinations; optional for DuckDB; leave empty for SQLite."/></td>
+					</tr>
+					<tr class="embedded-field">
+						<td>Sync Mode</td>
+						<td><select id="syncMode" name="syncMode" title="CONSOLIDATION merges changes from all devices into the destination. REPLICATION mirrors each device's state to the destination.">
+								<%
+								if (syncMode.equals("CONSOLIDATION")) {
+									out.println("<option value=\"CONSOLIDATION\" selected>Consolidation</option>");
+								} else {
+									out.println("<option value=\"CONSOLIDATION\">Consolidation</option>");
+								}
+								if (syncMode.equals("REPLICATION")) {
+									out.println("<option value=\"REPLICATION\" selected>Replication</option>");
+								} else {
+									out.println("<option value=\"REPLICATION\">Replication</option>");
 								}
 								%>
 						</select></td>
