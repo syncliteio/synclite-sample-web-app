@@ -35,6 +35,18 @@ final class SecurityUtil {
         "SQLITE_STORE", "DUCKDB_STORE", "DERBY_STORE", "H2_STORE", "HYPERSQL_STORE"
     ));
 
+    private static final Set<String> ALLOWED_CONSOLIDATOR_TYPES = new HashSet<>(Arrays.asList(
+        "STANDALONE", "EMBEDDED"
+    ));
+
+    private static final Set<String> ALLOWED_DST_TYPES = new HashSet<>(Arrays.asList(
+        "SQLITE", "DUCKDB", "POSTGRES"
+    ));
+
+    private static final Set<String> ALLOWED_SYNC_MODES = new HashSet<>(Arrays.asList(
+        "CONSOLIDATION", "REPLICATION"
+    ));
+
     private SecurityUtil() {
     }
 
@@ -98,6 +110,51 @@ final class SecurityUtil {
             throw new ServletException("Invalid device type specified");
         }
         return val;
+    }
+
+    static String getValidatedConsolidatorType(HttpServletRequest request, String paramName) throws ServletException {
+        String val = request.getParameter(paramName);
+        if (val == null || val.trim().isEmpty()) {
+            return "STANDALONE";
+        }
+        String trimmed = val.trim().toUpperCase();
+        if (!ALLOWED_CONSOLIDATOR_TYPES.contains(trimmed)) {
+            throw new ServletException("Invalid consolidator type specified");
+        }
+        return trimmed;
+    }
+
+    static String getValidatedDstType(HttpServletRequest request, String paramName) throws ServletException {
+        String val = getRequiredText(request, paramName, 64);
+        String upper = val.toUpperCase();
+        if (!ALLOWED_DST_TYPES.contains(upper)) {
+            throw new ServletException("Invalid destination type specified");
+        }
+        return upper;
+    }
+
+    static String getValidatedSyncMode(HttpServletRequest request, String paramName) throws ServletException {
+        String val = request.getParameter(paramName);
+        if (val == null || val.trim().isEmpty()) {
+            return "CONSOLIDATION";
+        }
+        String trimmed = val.trim().toUpperCase();
+        if (!ALLOWED_SYNC_MODES.contains(trimmed)) {
+            throw new ServletException("Invalid sync mode specified");
+        }
+        return trimmed;
+    }
+
+    static String getOptionalText(HttpServletRequest request, String paramName, int maxLen) throws ServletException {
+        String val = request.getParameter(paramName);
+        if (val == null || val.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = val.trim();
+        if (trimmed.length() > maxLen) {
+            throw new ServletException("\"" + paramName + "\" must be <= " + maxLen + " characters");
+        }
+        return trimmed;
     }
 
     static Path normalizePath(String rawPath) throws ServletException {
