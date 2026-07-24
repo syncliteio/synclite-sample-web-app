@@ -84,6 +84,12 @@ public class DeviceCreator extends HttpServlet {
 			String deviceType = SecurityUtil.getValidatedDeviceType(request, "deviceType");
 			int numDevices = SecurityUtil.getRequiredPositiveInt(request, "numDevices", MAX_DEVICES);
 
+			// Consolidator type: STANDALONE (default) runs the consolidator as a
+			// separate process; EMBEDDED runs the in-process consolidator and
+			// requires destination details wired via DestinationOptions.
+			String consolidatorType = SecurityUtil.getValidatedConsolidatorType(request, "consolidatorType");
+			final DestinationOptions destination = buildDestinationOptions(request, consolidatorType);
+
 			//Save the contents of props into base_path/synclite.props file
 			Path propsPath = basePath.resolve("synclite.conf");
 			Files.writeString(propsPath, props, StandardCharsets.UTF_8, StandardOpenOption.CREATE,
@@ -97,67 +103,67 @@ public class DeviceCreator extends HttpServlet {
 			if (deviceType.equals("STREAMING")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initStreamingDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initStreamingDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("SQLITE")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}				
 			} else if (deviceType.equals("DUCKDB")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DERBY")){
 					for (int i = 1; i <= numDevices; ++i) {
 						final int deviceIdx = i;
-						Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyDevice(deviceIdx, basePath, propsPath.toString()));
+						Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyDevice(deviceIdx, basePath, propsPath.toString(), destination));
 						futureList.add(future);
 					}	
 			} else if (deviceType.equals("H2")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initH2Device(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initH2Device(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}	
 			} else if (deviceType.equals("HYPERSQL")){
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}	
 			} else if (deviceType.equals("SQLITE_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteStoreDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initSQLiteStoreDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("DUCKDB_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBStoreDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDuckDBStoreDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 			 	}
 			} else if (deviceType.equals("DERBY_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyStoreDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initDerbyStoreDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("H2_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initH2StoreDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initH2StoreDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			} else if (deviceType.equals("HYPERSQL_STORE")) {
 				for (int i = 1; i <= numDevices; ++i) {
 					final int deviceIdx = i;
-					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLStoreDevice(deviceIdx, basePath, propsPath.toString()));
+					Future<Void> future = fixedPoolExecutor.submit(() -> initHyperSQLStoreDevice(deviceIdx, basePath, propsPath.toString(), destination));
 					futureList.add(future);
 				}
 			}
@@ -168,6 +174,14 @@ public class DeviceCreator extends HttpServlet {
 			
 			request.getSession().setAttribute("deviceType", deviceType);
 			request.getSession().setAttribute("numDevices", numDevices);
+			request.getSession().setAttribute("consolidatorType", consolidatorType);
+			if (destination != null) {
+				request.getSession().setAttribute("dstType", destination.dstType().name());
+				request.getSession().setAttribute("dstConnectionString", destination.connectionString());
+				request.getSession().setAttribute("dstDatabase", destination.database().orElse(""));
+				request.getSession().setAttribute("dstSchema", destination.schema().orElse(""));
+				request.getSession().setAttribute("syncMode", destination.syncMode().name());
+			}
 			
 			request.getRequestDispatcher("createDevices.jsp?emulateStatus=SUCCESS&emulateStatusDetails=;").forward(request, response);
 		} catch (InterruptedException e) {
@@ -196,22 +210,58 @@ public class DeviceCreator extends HttpServlet {
 
 	}
 
-	private Void initStreamingDevice(int i, Path basePath, String propsPath) throws Exception {
+	private DestinationOptions buildDestinationOptions(HttpServletRequest request, String consolidatorType)
+			throws ServletException {
+		if (!"EMBEDDED".equals(consolidatorType)) {
+			return null;
+		}
+		String dstType = SecurityUtil.getValidatedDstType(request, "dstType");
+		String dstConnectionString = SecurityUtil.getRequiredText(request, "dstConnectionString", 4096);
+		String dstDatabase = SecurityUtil.getOptionalText(request, "dstDatabase", 1024);
+		String dstSchema = SecurityUtil.getOptionalText(request, "dstSchema", 1024);
+		String syncMode = SecurityUtil.getValidatedSyncMode(request, "syncMode");
+
+		DestinationOptions.Builder builder = DestinationOptions.builder()
+				.dstType(DstType.valueOf(dstType))
+				.connectionString(dstConnectionString)
+				.syncMode(DstSyncMode.valueOf(syncMode));
+		if (dstDatabase != null) {
+			builder.database(dstDatabase);
+		}
+		if (dstSchema != null) {
+			builder.schema(dstSchema);
+		}
+		try {
+			return builder.build();
+		} catch (IllegalArgumentException e) {
+			throw new ServletException(e.getMessage());
+		}
+	}
+
+	private Void initStreamingDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.Streaming");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			Streaming.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				Streaming.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				Streaming.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
 		}
 	} 
 
-	private Void initSQLiteDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initSQLiteDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.SQLite");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			SQLite.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				SQLite.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				SQLite.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -229,22 +279,30 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
-	private Void initSQLiteStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initSQLiteStoreDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.SQLiteStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			SQLiteStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				SQLiteStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				SQLiteStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
 		}
 	} 
 
-	private Void initDuckDBDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initDuckDBDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.DuckDB");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			DuckDB.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				DuckDB.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				DuckDB.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -262,22 +320,30 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
-	private Void initDuckDBStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initDuckDBStoreDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.DuckDBStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			DuckDBStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				DuckDBStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				DuckDBStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
 		}
 	}
 
-	private Void initDerbyDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initDerbyDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.Derby");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			Derby.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				Derby.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				Derby.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -295,22 +361,30 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
-	private Void initDerbyStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initDerbyStoreDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.DerbyStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			DerbyStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				DerbyStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				DerbyStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
 		}
 	}
 
-	private Void initH2Device(int i, Path basePath, String propsPath) throws Exception {
+	private Void initH2Device(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.H2");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			H2.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				H2.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				H2.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -328,22 +402,30 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
-	private Void initH2StoreDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initH2StoreDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.H2Store");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			H2Store.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				H2Store.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				H2Store.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
 		}
 	}
 
-	private Void initHyperSQLDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initHyperSQLDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.HyperSQL");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			HyperSQL.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				HyperSQL.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				HyperSQL.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
@@ -361,11 +443,15 @@ public class DeviceCreator extends HttpServlet {
 		}
 	}
 
-	private Void initHyperSQLStoreDevice(int i, Path basePath, String propsPath) throws Exception {
+	private Void initHyperSQLStoreDevice(int i, Path basePath, String propsPath, DestinationOptions destination) throws Exception {
 		try {
 			Class.forName("io.synclite.HyperSQLStore");
 			Path devicePath = Path.of(basePath.toString(), String.valueOf(i));
-			HyperSQLStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			if (destination != null) {
+				HyperSQLStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i), destination);
+			} else {
+				HyperSQLStore.initialize(devicePath, Path.of(propsPath), String.valueOf(i));
+			}
 			return null;
 		} catch (Exception e) {
 			throw e;
