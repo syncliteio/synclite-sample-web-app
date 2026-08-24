@@ -60,10 +60,10 @@ This source code is the best starting point if you want to see exactly how to in
 
 ```bash
 cd synclite-sample-web-app/web
-mvn -Drevision=1.0.0 clean install
+mvn -Drevision=1.1.0 clean install
 ```
 
-Built WAR: `web/target/synclite-sample-app-1.0.0.war`
+Built WAR: `web/target/synclite-sample-app-1.1.0.war`
 
 ## Related Components
 

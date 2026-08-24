@@ -8,7 +8,7 @@
 	<packaging>war</packaging>
 	
 	<properties>
-		<revision>1.0.0</revision>
+		<revision>1.1.0</revision>
 		<synclite-logger.version>${revision}</synclite-logger.version>
 	</properties>
 	<build>
