@@ -18,11 +18,12 @@
 <%@page import="java.nio.file.Path"%>
 <%@page import="java.io.BufferedReader"%>
 <%@page import="java.io.FileReader"%>
+<%@page import="java.util.ArrayList"%>
+<%@page import="java.util.List"%>
 <%@page import="java.util.HashMap"%>
 <%@page import="java.util.Arrays"%>
 <%@page import="java.io.InputStreamReader"%>
 <%@page import="java.io.FileWriter"%>
-<%@page import="javax.websocket.Session"%>
 <%@page import="io.synclite.logger.*" %>
 <%@page import="org.owasp.encoder.Encode"%>
 
@@ -37,19 +38,37 @@
 <link rel="stylesheet" href=css/SyncLiteStyle.css>
 
 <script type="text/javascript">
-function toggleDstFields() {
-	var dstType = document.getElementById("dstType");
+var MAX_DESTINATIONS = 16;
+
+function getDestinationRows() {
+	return Array.prototype.slice.call(
+		document.querySelectorAll("#destinationList .destination-card"));
+}
+
+function getDestinationField(row, fieldName) {
+	return row.querySelector('[data-field="' + fieldName + '"]');
+}
+
+function toggleDstFields(row) {
+	var dstType = getDestinationField(row, "dst-type");
 	var dstTypeVal = dstType ? dstType.value : "SQLITE";
-	var dbFields = document.getElementsByClassName("dst-db-field");
-	var schemaFields = document.getElementsByClassName("dst-schema-field");
+	var dbField = row.querySelector(".dst-db-field");
+	var schemaField = row.querySelector(".dst-schema-field");
+	var database = getDestinationField(row, "dst-database");
+	var schema = getDestinationField(row, "dst-schema");
 	var showDb = (dstTypeVal === "DUCKDB" || dstTypeVal === "POSTGRES");
 	var showSchema = (dstTypeVal === "POSTGRES");
-	var i;
-	for (i = 0; i < dbFields.length; i++) {
-		dbFields[i].style.display = showDb ? "" : "none";
+	if (dbField) {
+		dbField.style.display = showDb ? "" : "none";
 	}
-	for (i = 0; i < schemaFields.length; i++) {
-		schemaFields[i].style.display = showSchema ? "" : "none";
+	if (schemaField) {
+		schemaField.style.display = showSchema ? "" : "none";
+	}
+	if (database) {
+		database.required = showDb;
+	}
+	if (schema) {
+		schema.required = showSchema;
 	}
 }
 
@@ -60,8 +79,20 @@ function toggleEmbeddedFields() {
 	for (var i = 0; i < fields.length; i++) {
 		fields[i].style.display = embedded ? "" : "none";
 	}
+	var destinationInputs = document.querySelectorAll("#destinationList [data-field]");
+	for (var inputIndex = 0; inputIndex < destinationInputs.length; inputIndex++) {
+		destinationInputs[inputIndex].disabled = !embedded;
+	}
+	document.getElementById("num-destinations").disabled = !embedded;
 	if (embedded) {
-		toggleDstFields();
+		var rows = getDestinationRows();
+		if (rows.length === 0) {
+			addDestination();
+		}
+		rows = getDestinationRows();
+		for (var j = 0; j < rows.length; j++) {
+			toggleDstFields(rows[j]);
+		}
 	}
 }
 
@@ -70,8 +101,8 @@ function toggleEmbeddedFields() {
 // current values are overwritten (used on destination-type change);
 // otherwise only empty fields are filled (used on initial page load
 // so user/session values are preserved).
-function applyDstDefaults(force) {
-	var dstType = document.getElementById("dstType");
+function applyDstDefaults(row, force) {
+	var dstType = getDestinationField(row, "dst-type");
 	if (!dstType || !window.DST_DEFAULTS) {
 		return;
 	}
@@ -79,11 +110,13 @@ function applyDstDefaults(force) {
 	if (!defs) {
 		return;
 	}
-	var conn = document.getElementById("dstConnectionString");
-	var db = document.getElementById("dstDatabase");
-	var schema = document.getElementById("dstSchema");
+	var conn = getDestinationField(row, "dst-connection-string");
+	var db = getDestinationField(row, "dst-database");
+	var schema = getDestinationField(row, "dst-schema");
+	var destinationIndex = getDestinationRows().indexOf(row) + 1;
+	var connectionString = defs.connectionString.replace("{DST_INDEX}", destinationIndex);
 	if (conn && (force || conn.value === "")) {
-		conn.value = defs.connectionString;
+		conn.value = connectionString;
 	}
 	if (db && (force || db.value === "")) {
 		db.value = defs.database;
@@ -93,14 +126,129 @@ function applyDstDefaults(force) {
 	}
 }
 
-function onDstTypeChange() {
-	applyDstDefaults(true);
-	toggleDstFields();
+function onDstTypeChange(select) {
+	var row = select.closest(".destination-card");
+	applyDstDefaults(row, true);
+	toggleDstFields(row);
+}
+
+function createDestinationCard() {
+	var row = document.createElement("div");
+	row.className = "destination-card";
+	row.innerHTML =
+		'<div class="destination-card-header">' +
+			'<strong class="destination-title"></strong>' +
+			'<button type="button" class="destination-remove">Remove</button>' +
+		'</div>' +
+		'<div class="destination-grid">' +
+			'<label>Destination Type' +
+				'<select data-field="dst-type" title="Destination backend for the embedded consolidator.">' +
+					'<option value="SQLITE">SQLite</option>' +
+					'<option value="DUCKDB">DuckDB</option>' +
+					'<option value="POSTGRES">PostgreSQL</option>' +
+				'</select>' +
+			'</label>' +
+			'<label class="destination-wide">Connection String' +
+				'<input type="text" data-field="dst-connection-string" required maxlength="4096" title="Connection string for this destination." />' +
+			'</label>' +
+			'<label class="dst-db-field">Database' +
+				'<input type="text" data-field="dst-database" maxlength="1024" title="Required for DuckDB and PostgreSQL; leave empty for SQLite." />' +
+			'</label>' +
+			'<label class="dst-schema-field">Schema' +
+				'<input type="text" data-field="dst-schema" maxlength="1024" title="Required for PostgreSQL; leave empty for SQLite." />' +
+			'</label>' +
+			'<label>Sync Mode' +
+				'<select data-field="dst-sync-mode" title="Consolidation merges device changes; replication mirrors each device.">' +
+					'<option value="CONSOLIDATION">Consolidation</option>' +
+					'<option value="REPLICATION">Replication</option>' +
+				'</select>' +
+			'</label>' +
+		'</div>';
+	row.querySelector(".destination-remove").addEventListener("click", function() {
+		removeDestination(this);
+	});
+	getDestinationField(row, "dst-type").addEventListener("change", function() {
+		onDstTypeChange(this);
+	});
+	return row;
+}
+
+function renumberDestinations() {
+	var rows = getDestinationRows();
+	for (var offset = 0; offset < rows.length; offset++) {
+		var index = offset + 1;
+		rows[offset].querySelector(".destination-title").textContent = "Destination " + index;
+		var fields = rows[offset].querySelectorAll("[data-field]");
+		for (var fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+			var fieldName = fields[fieldIndex].getAttribute("data-field");
+			fields[fieldIndex].name = fieldName + "-" + index;
+			fields[fieldIndex].id = fieldName + "-" + index;
+		}
+		rows[offset].querySelector(".destination-remove").disabled = rows.length === 1;
+	}
+	document.getElementById("num-destinations").value = rows.length;
+	document.getElementById("addDestinationButton").disabled = rows.length >= MAX_DESTINATIONS;
+}
+
+function addDestination(initialValue) {
+	if (getDestinationRows().length >= MAX_DESTINATIONS) {
+		return;
+	}
+	var row = createDestinationCard();
+	document.getElementById("destinationList").appendChild(row);
+	renumberDestinations();
+	if (initialValue) {
+		getDestinationField(row, "dst-type").value = initialValue["dst-type"];
+		getDestinationField(row, "dst-connection-string").value = initialValue["dst-connection-string"];
+		getDestinationField(row, "dst-database").value = initialValue["dst-database"];
+		getDestinationField(row, "dst-schema").value = initialValue["dst-schema"];
+		getDestinationField(row, "dst-sync-mode").value = initialValue["dst-sync-mode"];
+	}
+	applyDstDefaults(row, !initialValue);
+	toggleDstFields(row);
+}
+
+function removeDestination(button) {
+	var rows = getDestinationRows();
+	if (rows.length <= 1) {
+		return;
+	}
+	button.closest(".destination-card").remove();
+	renumberDestinations();
+}
+
+function readInitialDestinations() {
+	var values = [];
+	var initialRows = document.querySelectorAll("#initialDestinationValues .initial-destination");
+	for (var i = 0; i < initialRows.length; i++) {
+		values.push({
+			"dst-type": initialRows[i].getAttribute("data-dst-type"),
+			"dst-connection-string": initialRows[i].getAttribute("data-dst-connection-string"),
+			"dst-database": initialRows[i].getAttribute("data-dst-database"),
+			"dst-schema": initialRows[i].getAttribute("data-dst-schema"),
+			"dst-sync-mode": initialRows[i].getAttribute("data-dst-sync-mode")
+		});
+	}
+	return values;
 }
 
 window.addEventListener("DOMContentLoaded", function() {
+	document.getElementById("addDestinationButton").addEventListener("click", function() {
+		addDestination();
+	});
+	var initialDestinations = readInitialDestinations();
+	for (var i = 0; i < initialDestinations.length; i++) {
+		addDestination(initialDestinations[i]);
+	}
+	if (getDestinationRows().length === 0) {
+		addDestination();
+	}
+	renumberDestinations();
 	toggleEmbeddedFields();
-	applyDstDefaults(false);
+	var form = document.querySelector('form[action$="/deviceCreator"]');
+	if (form) {
+		form.addEventListener("submit", renumberDestinations);
+	}
 });
 </script>
 <title>SyncLite App - Create Databases</title>
@@ -108,6 +256,37 @@ window.addEventListener("DOMContentLoaded", function() {
 <%!
 private String escHtml(String value) {
 	return value == null ? "" : Encode.forHtml(value);
+}
+
+private int destinationCount(Object value) {
+	if (value == null) {
+		return 1;
+	}
+	try {
+		return Math.max(1, Math.min(16, Integer.parseInt(value.toString())));
+	} catch (NumberFormatException e) {
+		return 1;
+	}
+}
+
+private String destinationValue(javax.servlet.http.HttpServletRequest request,
+		javax.servlet.http.HttpSession session, boolean indexedRequest,
+		String fieldName, String legacyFieldName, int index, String defaultValue) {
+	if (indexedRequest) {
+		String value = request.getParameter(fieldName + "-" + index);
+		return value == null ? defaultValue : value;
+	}
+	if (index == 1 && request.getParameter(legacyFieldName) != null) {
+		return request.getParameter(legacyFieldName);
+	}
+	Object indexedValue = session.getAttribute(fieldName + "-" + index);
+	if (indexedValue != null) {
+		return indexedValue.toString();
+	}
+	if (index == 1 && session.getAttribute(legacyFieldName) != null) {
+		return session.getAttribute(legacyFieldName).toString();
+	}
+	return defaultValue;
 }
 %>
 <%
@@ -156,47 +335,40 @@ if (request.getParameter("consolidatorType") != null) {
 	consolidatorType = session.getAttribute("consolidatorType").toString();
 }
 
-String dstType = "SQLITE";
-if (request.getParameter("dstType") != null) {
-	dstType = request.getParameter("dstType");
-} else if (session.getAttribute("dstType") != null) {
-	dstType = session.getAttribute("dstType").toString();
+boolean indexedDestinationRequest = request.getParameter("num-destinations") != null;
+int numDestinations;
+if (indexedDestinationRequest) {
+	numDestinations = destinationCount(request.getParameter("num-destinations"));
+} else {
+	Object sessionDestinationCount = session.getAttribute("num-destinations");
+	numDestinations = destinationCount(sessionDestinationCount);
 }
 
-String dstConnectionString = "";
-if (request.getParameter("dstConnectionString") != null) {
-	dstConnectionString = request.getParameter("dstConnectionString");
-} else if (session.getAttribute("dstConnectionString") != null) {
-	dstConnectionString = session.getAttribute("dstConnectionString").toString();
+List<String> dstTypes = new ArrayList<>();
+List<String> dstConnectionStrings = new ArrayList<>();
+List<String> dstDatabases = new ArrayList<>();
+List<String> dstSchemas = new ArrayList<>();
+List<String> syncModes = new ArrayList<>();
+for (int index = 1; index <= numDestinations; ++index) {
+	dstTypes.add(destinationValue(request, session, indexedDestinationRequest,
+			"dst-type", "dstType", index, "SQLITE"));
+	dstConnectionStrings.add(destinationValue(request, session, indexedDestinationRequest,
+			"dst-connection-string", "dstConnectionString", index, ""));
+	dstDatabases.add(destinationValue(request, session, indexedDestinationRequest,
+			"dst-database", "dstDatabase", index, ""));
+	dstSchemas.add(destinationValue(request, session, indexedDestinationRequest,
+			"dst-schema", "dstSchema", index, ""));
+	syncModes.add(destinationValue(request, session, indexedDestinationRequest,
+			"dst-sync-mode", "syncMode", index, "CONSOLIDATION"));
 }
-
-String dstDatabase = "";
-if (request.getParameter("dstDatabase") != null) {
-	dstDatabase = request.getParameter("dstDatabase");
-} else if (session.getAttribute("dstDatabase") != null) {
-	dstDatabase = session.getAttribute("dstDatabase").toString();
-}
-
-String dstSchema = "";
-if (request.getParameter("dstSchema") != null) {
-	dstSchema = request.getParameter("dstSchema");
-} else if (session.getAttribute("dstSchema") != null) {
-	dstSchema = session.getAttribute("dstSchema").toString();
-}
-
-String syncMode = "CONSOLIDATION";
-if (request.getParameter("syncMode") != null) {
-	syncMode = request.getParameter("syncMode");
-} else if (session.getAttribute("syncMode") != null) {
-	syncMode = session.getAttribute("syncMode").toString();
-}
-
 // Default destination connection strings per destination type, mirroring
-// the SyncLite Consolidator UI. SQLite/DuckDB point at a consolidated
-// database file under the selected base path; PostgreSQL uses a local
-// server template. These feed the client-side auto-populate logic.
-String defaultConnStrSQLite = "jdbc:sqlite:" + Path.of(basePath, "consolidated_db.sqlite") + "?journal_mode=WAL";
-String defaultConnStrDuckDB = "jdbc:duckdb:" + Path.of(basePath, "consolidated_db.duckdb");
+// the SyncLite Consolidator UI. SQLite/DuckDB destination databases belong
+// in the job work directory, not alongside the source devices in db.
+// PostgreSQL uses a local server template. These feed the client-side
+// auto-populate logic.
+Path defaultWorkDir = Path.of(System.getProperty("user.home"), "synclite", jobName, "workDir");
+String defaultConnStrSQLite = "jdbc:sqlite:" + defaultWorkDir.resolve("consolidated_db_{DST_INDEX}.sqlite") + "?journal_mode=WAL";
+String defaultConnStrDuckDB = "jdbc:duckdb:" + defaultWorkDir.resolve("consolidated_db_{DST_INDEX}.duckdb");
 String defaultConnStrPostgreSQL = "jdbc:postgresql://127.0.0.1:5432/synclitedb?user=synclite&password=CHANGE_ME";
 
 
@@ -376,6 +548,20 @@ if (request.getParameter("emulateStatusDetails") != null) {
 		"POSTGRES": { connectionString: "<%=Encode.forJavaScript(defaultConnStrPostgreSQL)%>", database: "synclitedb", schema: "syncliteschema" }
 	};
 	</script>
+	<div id="initialDestinationValues" hidden>
+		<%
+		for (int offset = 0; offset < numDestinations; ++offset) {
+		%>
+		<div class="initial-destination"
+			data-dst-type="<%=Encode.forHtmlAttribute(dstTypes.get(offset))%>"
+			data-dst-connection-string="<%=Encode.forHtmlAttribute(dstConnectionStrings.get(offset))%>"
+			data-dst-database="<%=Encode.forHtmlAttribute(dstDatabases.get(offset))%>"
+			data-dst-schema="<%=Encode.forHtmlAttribute(dstSchemas.get(offset))%>"
+			data-dst-sync-mode="<%=Encode.forHtmlAttribute(syncModes.get(offset))%>"></div>
+		<%
+		}
+		%>
+	</div>
 	<%@include file="html/menu.html"%>	
 
 	<div class="main">
@@ -498,55 +684,15 @@ if (request.getParameter("emulateStatusDetails") != null) {
 						</select></td>
 					</tr>
 					<tr class="embedded-field">
-						<td>Destination Type</td>
-						<td><select id="dstType" name="dstType" onchange="onDstTypeChange()" title="Destination backend for the embedded consolidator. SQLite requires only a connection string; DuckDB requires a database; Postgres requires both database and schema.">
-								<%
-								if (dstType.equals("SQLITE")) {
-									out.println("<option value=\"SQLITE\" selected>SQLite</option>");
-								} else {
-									out.println("<option value=\"SQLITE\">SQLite</option>");
-								}
-								if (dstType.equals("DUCKDB")) {
-									out.println("<option value=\"DUCKDB\" selected>DuckDB</option>");
-								} else {
-									out.println("<option value=\"DUCKDB\">DuckDB</option>");
-								}
-								if (dstType.equals("POSTGRES")) {
-									out.println("<option value=\"POSTGRES\" selected>PostgreSQL</option>");
-								} else {
-									out.println("<option value=\"POSTGRES\">PostgreSQL</option>");
-								}
-								%>
-						</select></td>
-					</tr>
-					<tr class="embedded-field">
-						<td>Destination Connection String</td>
-						<td><input type="text" size="60" id="dstConnectionString" name="dstConnectionString" value="<%=escHtml(dstConnectionString)%>" title="Connection string for the destination. Examples: jdbc:sqlite:/path/to/dst.db ; jdbc:duckdb:/path/to/dst.duckdb ; jdbc:postgresql://user:pw@host:5432/db"/></td>
-					</tr>
-					<tr class="embedded-field dst-db-field">
-						<td>Destination Database</td>
-						<td><input type="text" size="30" id="dstDatabase" name="dstDatabase" value="<%=escHtml(dstDatabase)%>" title="Database name. Required for DuckDB and PostgreSQL destinations; leave empty for SQLite."/></td>
-					</tr>
-					<tr class="embedded-field dst-schema-field">
-						<td>Destination Schema</td>
-						<td><input type="text" size="30" id="dstSchema" name="dstSchema" value="<%=escHtml(dstSchema)%>" title="Schema name. Required for PostgreSQL destinations; optional for DuckDB; leave empty for SQLite."/></td>
-					</tr>
-					<tr class="embedded-field">
-						<td>Sync Mode</td>
-						<td><select id="syncMode" name="syncMode" title="CONSOLIDATION merges changes from all devices into the destination. REPLICATION mirrors each device's state to the destination.">
-								<%
-								if (syncMode.equals("CONSOLIDATION")) {
-									out.println("<option value=\"CONSOLIDATION\" selected>Consolidation</option>");
-								} else {
-									out.println("<option value=\"CONSOLIDATION\">Consolidation</option>");
-								}
-								if (syncMode.equals("REPLICATION")) {
-									out.println("<option value=\"REPLICATION\" selected>Replication</option>");
-								} else {
-									out.println("<option value=\"REPLICATION\">Replication</option>");
-								}
-								%>
-						</select></td>
+						<td>Destinations</td>
+						<td>
+							<input type="hidden" id="num-destinations" name="num-destinations" value="<%=numDestinations%>" />
+							<div id="destinationList" aria-live="polite"></div>
+							<div class="destination-actions">
+								<button type="button" id="addDestinationButton">Add Destination</button>
+								<span>Destinations are initialized in the order shown.</span>
+							</div>
+						</td>
 					</tr>
 					<tr>
 						<td>Device Configuration Manager</td>

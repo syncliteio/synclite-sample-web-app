@@ -8,6 +8,7 @@ The **SyncLite Sample Web App** is a fully functional JSP/Servlet web applicatio
 
 The sample app lets you:
 - Create SyncLite devices (databases) of any supported type directly from a web form
+- Run the consolidator in-process with one or more ordered destinations
 - Execute SQL workloads (INSERT / UPDATE / DELETE batches) across multiple devices simultaneously
 - Observe live data consolidation flowing into the destination database via the SyncLite Consolidator dashboard
 
@@ -27,6 +28,7 @@ Then open: http://localhost:8080/synclite-sample-app
 | Feature | Description |
 |---|---|
 | Device creation | Create one or many SyncLite devices (SQLite, DuckDB, Derby, H2, HyperSQL, Streaming) |
+| Embedded multi-destination consolidation | Add, remove, and configure ordered SQLite, DuckDB, or PostgreSQL destinations with a sync mode for each destination |
 | SQL workload execution | Run configurable INSERT / UPDATE / DELETE workloads on N devices in parallel |
 | Multi-device consolidation | Watch hundreds of devices consolidating into a single destination DB |
 | Configuration | Shows how to pass a `synclite.conf` to `SyncLite.initialize()` |
